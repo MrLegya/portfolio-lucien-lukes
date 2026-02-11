@@ -325,21 +325,23 @@ const getStack = (lang) => [
 // --- COMPOSANTS ---
 
 const ScrollProgress = memo(() => {
-  const [scrollProgress, setScrollProgress] = useState(0);
+  const barRef = useRef(null);
 
   useEffect(() => {
     let rafId;
     const updateScroll = () => {
+        if (!barRef.current) return;
         const totalHeight = document.documentElement.scrollHeight - window.innerHeight;
         const progress = (window.scrollY / totalHeight) * 100;
-        setScrollProgress(progress);
+        barRef.current.style.height = `${progress}%`;
     };
 
     const handleScroll = () => {
+       cancelAnimationFrame(rafId);
        rafId = requestAnimationFrame(updateScroll);
     };
 
-    window.addEventListener('scroll', handleScroll);
+    window.addEventListener('scroll', handleScroll, { passive: true });
     return () => {
         window.removeEventListener('scroll', handleScroll);
         cancelAnimationFrame(rafId);
@@ -349,8 +351,9 @@ const ScrollProgress = memo(() => {
   return (
     <div className="fixed top-0 right-0 h-full w-1.5 bg-white/5 z-[90] hidden md:block">
       <div 
-        className="bg-red-600 w-full transition-all duration-100 ease-out will-change-transform"
-        style={{ height: `${scrollProgress}%` }}
+        ref={barRef}
+        className="bg-red-600 w-full will-change-transform"
+        style={{ height: '0%' }}
       />
     </div>
   );
@@ -687,14 +690,21 @@ const Experiences = memo(({ experiences, onSpell, t }) => {
 
   useEffect(() => {
     let rafId;
+    let ticking = false;
+
     const handleScroll = () => {
-      rafId = requestAnimationFrame(() => {
-        if (!containerRef.current || !progressRef.current) return;
-        const rect = containerRef.current.getBoundingClientRect();
-        const windowHeight = window.innerHeight;
-        const progress = Math.min(Math.max(- (rect.top - windowHeight) / rect.height, 0), 1);
-        progressRef.current.style.transform = `scaleY(${progress})`;
-      });
+        if (!ticking) {
+            rafId = requestAnimationFrame(() => {
+                if (containerRef.current && progressRef.current) {
+                    const rect = containerRef.current.getBoundingClientRect();
+                    const windowHeight = window.innerHeight;
+                    const progress = Math.min(Math.max(- (rect.top - windowHeight) / rect.height, 0), 1);
+                    progressRef.current.style.transform = `scaleY(${progress})`;
+                }
+                ticking = false;
+            });
+            ticking = true;
+        }
     };
     window.addEventListener('scroll', handleScroll, { passive: true });
     return () => {
@@ -1365,7 +1375,7 @@ const App = () => {
             <HeroSection openChat={() => setIsChatOpen(true)} playSound={playSound} profileImageUrl={profileImageUrl} t={t.hero} handleDownload={handleDownload} />
             <TrustStrip lang={lang} t={t.trust} />
             
-            <section className="py-24 md:py-48 px-6 text-left">
+            <section className="py-24 md:py-48 px-6 text-left relative">
               <div className="max-w-7xl mx-auto space-y-16 md:space-y-32">
                 <div className="flex flex-col md:flex-row justify-between items-end gap-6 md:gap-10">
                   <div className="space-y-3 md:space-y-4">
@@ -1385,6 +1395,9 @@ const App = () => {
                     </div>
                   ))}
                 </div>
+              </div>
+              <div className="hidden lg:block absolute right-4 top-1/2 -translate-y-1/2 w-1 h-32 bg-white/5 rounded-full overflow-hidden">
+                  <div className="w-full h-1/2 bg-red-600 animate-pulse rounded-full"></div>
               </div>
             </section>
 
@@ -1461,7 +1474,7 @@ const App = () => {
 
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&display=swap');
-        :root { scroll-behavior: smooth; }
+        :root { scroll-behavior: auto; }
         body { font-family: 'Inter', sans-serif; background: #020202; overflow-x: hidden; touch-action: pan-y; }
         .animate-reveal { animation: reveal 0.6s cubic-bezier(0.19, 1, 0.22, 1) forwards; }
         @keyframes reveal { from { opacity: 0; transform: translateY(15px); } to { opacity: 1; transform: translateY(0); } }
