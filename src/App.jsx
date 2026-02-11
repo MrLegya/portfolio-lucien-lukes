@@ -262,7 +262,7 @@ const TEXTS = {
       you: "You (Visitor)",
       score: "Current Score",
       taunt: "See, I'm better... So contact me! 😉",
-      retry: "Retry",
+      retry: "Relancer",
       contact: "Contact",
       back: "Back",
       logic_title: "THE LOGIC BEHIND THIS GAME",
@@ -302,29 +302,29 @@ const TEXTS = {
       success_title: "Received!",
       success_msg: "I just received your brief. I'll analyze it and get back to you within 24h at",
       close: "Close",
-      quest_bonus: "Mission Accomplished: -5% on your quote!",
-      certified_badge: "Expert Certified"
+      quest_bonus: "Mission Accomplie : -5% sur votre devis !",
+      certified_badge: "Expert Certifié"
     },
     modal: {
-      strat: "Strategic Concept",
-      ops: "Key Operations",
-      btn: "Boost this lever"
+      strat: "Concept stratégique",
+      ops: "Opérations clés",
+      btn: "Propulser ce levier"
     },
     toast: {
-      email_copied: "Email copied to clipboard!",
-      discord_copied: "Discord copied!"
+      email_copied: "Email copié dans le presse-papier !",
+      discord_copied: "Discord copié !"
     },
     quest: {
-      title: "Side Quests",
-      instruction: "Complete the objectives below to unlock a 5% discount on your next freelance mission.",
-      tip: "Hint: Find hidden keywords and prove your skill in the simulation.",
-      progress: "Sequence",
-      locked: "Pending...",
-      unlocked: "Expert Access Granted",
-      congrats: "Access Granted!",
-      benefit: "Bonus: -5% on quote",
-      task_words: "Decrypt Story (Keywords)",
-      task_score: "Overload Simulation (Score)"
+      title: "Quêtes secondaires",
+      instruction: "Complétez les objectifs ci-dessous pour débloquer -5% de réduction sur votre prochaine mission freelance.",
+      tip: "Indice : Cherchez des mots cachés dans le texte (cliquez dessus) et prouvez votre valeur au jeu.",
+      progress: "Avancement",
+      locked: "En cours...",
+      unlocked: "Badge Expert Débloqué",
+      congrats: "Mission Accomplie !",
+      benefit: "Récompense : -5% sur le devis",
+      task_words: "Trouver les 3 mots cachés",
+      task_score: "Faire +150k pts au Growth Lab"
     }
   }
 };
@@ -389,32 +389,24 @@ const Toast = memo(({ message, onClose }) => {
 });
 
 // ANIMATION VICTOIRE GLOBALE
-const VictoryCelebration = () => {
+const VictoryCelebration = memo(() => {
     return (
         <div className="fixed inset-0 z-[9999] pointer-events-none flex items-center justify-center overflow-hidden">
              <div className="absolute inset-0 bg-black/40 backdrop-blur-[2px] animate-fade-in-up" />
-             {/* Simple CSS Confetti using shadows */}
              <div className="absolute inset-0 animate-confetti-fall" style={{backgroundImage: 'radial-gradient(circle, #fbbf24 4px, transparent 4px)', backgroundSize: '60px 60px', opacity: 0.5}}></div>
              <div className="relative z-10 flex flex-col items-center animate-bounce-in">
                  <Trophy size={100} className="text-yellow-400 drop-shadow-[0_0_30px_rgba(251,191,36,0.6)]" />
                  <h2 className="text-6xl font-black text-white uppercase italic tracking-tighter mt-6 drop-shadow-2xl">Expert <span className="text-yellow-400">Unlock</span></h2>
              </div>
              <style>{`
-                @keyframes confetti-fall {
-                    0% { background-position: 0 0; }
-                    100% { background-position: 100px 1000px; }
-                }
+                @keyframes confetti-fall { 0% { background-position: 0 0; } 100% { background-position: 100px 1000px; } }
                 .animate-confetti-fall { animation: confetti-fall 10s linear infinite; }
-                @keyframes bounce-in {
-                    0% { transform: scale(0); opacity: 0; }
-                    60% { transform: scale(1.2); opacity: 1; }
-                    100% { transform: scale(1); }
-                }
+                @keyframes bounce-in { 0% { transform: scale(0); opacity: 0; } 60% { transform: scale(1.2); opacity: 1; } 100% { transform: scale(1); } }
                 .animate-bounce-in { animation: bounce-in 0.8s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards; }
              `}</style>
         </div>
     )
-}
+});
 
 // QUEST TRACKER
 const QuestTracker = memo(({ found, t }) => {
@@ -423,6 +415,7 @@ const QuestTracker = memo(({ found, t }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [showVictory, setShowVictory] = useState(false);
 
+  // Check individual progress
   const hasWord1 = found.includes('lumos');
   const hasWord2 = found.includes('alohomora');
   const hasWord3 = found.includes('wingardium');
@@ -511,7 +504,7 @@ const Navbar = memo(({ scrolled, view, navigateTo, openChat, lang, setLang, t, i
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   return (
-    <nav className={`fixed top-0 w-full z-[100] transition-all duration-700 font-black ${(scrolled || view === 'play') ? 'bg-black/95 backdrop-blur-md border-b border-white/10 py-4 shadow-2xl' : 'bg-transparent py-6 md:py-10'}`}>
+    <nav className={`fixed top-0 w-full z-[100] transition-all duration-700 font-black ${(scrolled || view === 'play') ? 'bg-black/95 backdrop-blur-md border-b border-white/10 py-4 shadow-2xl' : 'bg-transparent py-6 md:py-10'}`} style={{willChange: 'background-color, padding'}}>
       <div className="max-w-7xl mx-auto px-6 md:px-10 flex justify-between items-center relative">
         <div onClick={() => { navigateTo('home'); window.scrollTo({ top: 0, behavior: 'instant' }); }} className="group cursor-pointer flex items-center gap-4 md:gap-6 active:scale-90 transition-all duration-500 z-50">
           <div className="relative">
@@ -615,6 +608,7 @@ const TechStackTicker = memo(({t}) => {
     );
 });
 
+// PERF: Optimized ScrollProgress with transform instead of height/width to prevent layout thrashing
 const ScrollProgress = memo(() => {
   const barRef = useRef(null);
 
@@ -640,7 +634,7 @@ const ScrollProgress = memo(() => {
   }, []);
 
   return (
-    <div className="fixed top-0 right-0 h-full w-1.5 bg-white/5 z-[90] hidden md:block">
+    <div className="fixed top-0 right-0 h-full w-1.5 bg-white/5 z-[90] hidden md:block pointer-events-none">
       <div 
         ref={barRef}
         className="bg-red-600 w-full h-full origin-top will-change-transform"
@@ -652,7 +646,7 @@ const ScrollProgress = memo(() => {
 
 const TrustStrip = memo(({ lang, t }) => (
   <>
-    <div className="py-6 md:py-10 border-y border-white/5 bg-white/[0.02] overflow-hidden backdrop-blur-sm relative z-30" style={{ transform: 'translate3d(0,0,0)' }}>
+    <div className="py-6 md:py-10 border-y border-white/5 bg-white/[0.02] overflow-hidden backdrop-blur-sm relative z-30">
         <div className="max-w-7xl mx-auto px-6 flex flex-wrap justify-center lg:justify-between gap-4 md:gap-8 items-center text-slate-500 font-bold uppercase text-[9px] md:text-[10px] tracking-[0.2em]">
         <div className="flex items-center gap-2 md:gap-3"><ShieldCheck size={16} className="text-emerald-500" /> {t.sat}</div>
         <div className="flex items-center gap-2 md:gap-3"><Activity size={16} className="text-red-500" /> {t.proj}</div>
@@ -892,10 +886,10 @@ const HeroSection = memo(({ openChat, playSound, profileImageUrl, t, handleDownl
 
     return (
       <section id="hero" className="relative pt-32 md:pt-72 pb-16 md:pb-32 px-6 overflow-hidden font-black">
-        <div className="absolute top-0 left-0 w-full h-full bg-gradient-to-b from-red-900/10 via-transparent to-[#020202] -z-10" style={{ transform: 'translate3d(0,0,0)' }} />
-        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full h-[800px] md:h-[1200px] bg-[radial-gradient(circle_at_50%_0%,rgba(220,38,38,0.15)_0%,transparent_70%)] -z-10" style={{ transform: 'translate3d(-50%,0,0)' }} />
-        <div className="absolute bottom-0 left-0 w-full h-40 bg-gradient-to-t from-[#020202] to-transparent -z-10" style={{ transform: 'translate3d(0,0,0)' }} />
-        <div className="digital-grid absolute inset-0 opacity-10 -z-20" style={{ transform: 'translate3d(0,0,0)' }} />
+        <div className="absolute top-0 left-0 w-full h-full bg-gradient-to-b from-red-900/10 via-transparent to-[#020202] -z-10" />
+        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full h-[800px] md:h-[1200px] bg-[radial-gradient(circle_at_50%_0%,rgba(220,38,38,0.15)_0%,transparent_70%)] -z-10" />
+        <div className="absolute bottom-0 left-0 w-full h-40 bg-gradient-to-t from-[#020202] to-transparent -z-10" />
+        <div className="digital-grid absolute inset-0 opacity-10 -z-20" />
         <div className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-20 items-center">
           <div className="lg:col-span-8 space-y-8 md:space-y-12 animate-reveal">
             <div className="inline-flex items-center gap-4 px-6 py-2 rounded-full bg-white/5 border border-white/10 text-[9px] md:text-[10px] font-black text-red-500 uppercase tracking-[0.6em] shadow-2xl animate-fade-in-up">
@@ -928,7 +922,6 @@ const HeroSection = memo(({ openChat, playSound, profileImageUrl, t, handleDownl
               <img src={profileImageUrl} alt="Lucien Lukes Freelance Marketing Montpellier France" className="w-full h-full object-cover object-top brightness-110 contrast-105" />
             </div>
             
-            {/* BADGES */}
             <div className="absolute top-16 -left-12 bg-black/80 backdrop-blur-md border border-white/5 p-3 pr-5 rounded-full flex items-center gap-3 shadow-xl z-20 animate-float">
                   <div className="bg-red-600/20 p-2 rounded-full text-red-500"><Trophy size={16} /></div>
                   <div>
@@ -955,10 +948,12 @@ const Experiences = memo(({ experiences, onSpell, t }) => {
   const containerRef = useRef(null);
   const progressRef = useRef(null);
 
+  // PERF: Throttled scroll listener via rAF for the experience timeline
   useEffect(() => {
     let rafId;
     let containerRect = { top: 0, height: 0 };
     
+    // Cache dimensions
     const updateMetrics = () => {
         if(containerRef.current) {
             const r = containerRef.current.getBoundingClientRect();
@@ -1003,7 +998,7 @@ const Experiences = memo(({ experiences, onSpell, t }) => {
 
   return (
     <section id="missions" ref={containerRef} className="py-16 md:py-56 px-6 relative font-black">
-      <div className="absolute top-0 left-0 w-full h-full bg-gradient-to-b from-transparent via-red-600/5 to-transparent -z-10" style={{ transform: 'translate3d(0,0,0)' }} />
+      <div className="absolute top-0 left-0 w-full h-full bg-gradient-to-b from-transparent via-red-600/5 to-transparent -z-10" />
       <div className="max-w-6xl mx-auto space-y-12 md:space-y-32">
         <div className="text-center space-y-6">
             <p className="text-red-500 font-black uppercase text-[11px] tracking-[1em] animate-pulse">{t.roadmap}</p>
@@ -1089,6 +1084,7 @@ const CursusSectionComp = memo(({ t }) => (
 ));
 
 const SectionBio = memo(({ profileImageUrl, navigateTo, copyDiscord, copyFeedback, playSound, onSpell, t, handleDownload, sayHello }) => (
+  // PERF: Added will-change transform for smoother page transitions
   <div className="pt-24 md:pt-40 pb-16 md:pb-24 px-6 animate-reveal font-black" style={{willChange: 'transform', backfaceVisibility: 'hidden'}}>
     <div className="max-w-7xl mx-auto">
       <div className="mb-12 md:mb-20 space-y-6">
@@ -1216,18 +1212,102 @@ const SectionBio = memo(({ profileImageUrl, navigateTo, copyDiscord, copyFeedbac
   </div>
 ));
 
+// PERF: Optimized Game Component - Decoupled Physics from React Render Cycle
 const GrowthLabGameComp = memo(({ navigateTo, playSound, profileImageUrl, openChat, onSpell, t }) => {
   const [gameActive, setGameActive] = useState(false);
   const [showBriefing, setShowBriefing] = useState(true);
   const [score, setScore] = useState(0);
   const [timeLeft, setTimeLeft] = useState(15);
-  const [targets, setTargets] = useState([]);
+  // PERF: Store React state only for mounting/unmounting elements, not for their positions
+  const [targets, setTargets] = useState([]); 
   const [clickFeedbacks, setClickFeedbacks] = useState([]);
   const [multiplier, setMultiplier] = useState(1);
   const [combo, setCombo] = useState(0);
   const [panicMode, setPanicMode] = useState(false);
   const [visualEvent, setVisualEvent] = useState(null); 
 
+  // PERF: Refs to hold mutable game state without triggering re-renders
+  const targetsPhysics = useRef([]); // Stores x, y, vx, vy for calculation
+  const targetElementsRef = useRef({}); // Map of IDs to DOM elements
+
+  // PERF: Game Loop runs outside React render cycle
+  useEffect(() => {
+    let animationFrame;
+    if (gameActive) {
+      const updatePhysics = () => {
+        // Update physics state in Ref
+        targetsPhysics.current.forEach(t => {
+          t.x += t.vx;
+          t.y += t.vy;
+          
+          // Bounce logic
+          if (t.x <= 5 || t.x >= 95) t.vx = -t.vx;
+          if (t.y <= 5 || t.y >= 95) t.vy = -t.vy;
+
+          // Direct DOM manipulation
+          const el = targetElementsRef.current[t.id];
+          if (el) {
+            el.style.left = `${t.x}%`;
+            el.style.top = `${t.y}%`;
+          }
+        });
+        animationFrame = requestAnimationFrame(updatePhysics);
+      };
+      animationFrame = requestAnimationFrame(updatePhysics);
+    }
+    return () => cancelAnimationFrame(animationFrame);
+  }, [gameActive]);
+
+  // Game Logic: Spawning (Only this triggers React State update for adding DOM nodes)
+  useEffect(() => {
+    let spawnInterval;
+    if (gameActive) {
+      spawnInterval = setInterval(() => {
+        const id = Math.random();
+        const rand = Math.random();
+        let type = 'lead';
+        if (rand < 0.08) type = 'golden_rocket';
+        else if (rand < 0.30) type = 'spam'; 
+        else if (rand < 0.35) type = 'vip';
+        else if (rand < 0.45) type = 'bad_buzz';
+        else if (rand < 0.47) type = 'clock'; 
+        
+        const isMobile = window.innerWidth < 768;
+        const baseSpeed = isMobile ? 1.5 : 2.5; 
+        const panicSpeed = isMobile ? 2.5 : 4.5;
+        const speedFactor = panicMode ? panicSpeed : baseSpeed;
+
+        const newTarget = { 
+            id, 
+            x: Math.random() * 80 + 10, 
+            y: Math.random() * 70 + 15, 
+            type, 
+            vx: (Math.random() - 0.5) * speedFactor, 
+            vy: (Math.random() - 0.5) * speedFactor 
+        };
+
+        // Add to physics engine
+        targetsPhysics.current.push(newTarget);
+        
+        // Add to React state (just enough info to render the DOM node)
+        setTargets(prev => {
+            if (prev.length >= 8) return prev;
+            return [...prev, { id, type }]; 
+        });
+
+        // Auto-remove after 2s
+        setTimeout(() => {
+            setTargets(curr => curr.filter(t => t.id !== id));
+            targetsPhysics.current = targetsPhysics.current.filter(t => t.id !== id);
+            delete targetElementsRef.current[id];
+        }, 2000);
+
+      }, panicMode ? 150 : 280); 
+    }
+    return () => clearInterval(spawnInterval);
+  }, [gameActive, panicMode]); // Removed targets dependency to avoid loop
+
+  // Visual Events Loop
   useEffect(() => {
     let eventInterval;
     if (gameActive) {
@@ -1247,30 +1327,10 @@ const GrowthLabGameComp = memo(({ navigateTo, playSound, profileImageUrl, openCh
     return () => clearInterval(eventInterval);
   }, [gameActive, playSound]);
 
-  useEffect(() => {
-    let animationFrame;
-    if (gameActive) {
-      const updateTargets = () => {
-        setTargets(prev => prev.map(t => {
-          let nx = t.x + t.vx; let ny = t.y + t.vy;
-          let nvx = t.vx; let nvy = t.vy;
-          if (nx <= 5 || nx >= 95) nvx = -t.vx;
-          if (ny <= 5 || ny >= 95) nvy = -t.vy;
-          return { ...t, x: nx, y: ny, vx: nvx, vy: nvy };
-        }));
-        animationFrame = requestAnimationFrame(updateTargets);
-      };
-      animationFrame = requestAnimationFrame(updateTargets);
-    }
-    return () => cancelAnimationFrame(animationFrame);
-  }, [gameActive]);
-
+  // Timer Logic
   useEffect(() => {
     let timer;
     if (gameActive) {
-      const startTime = Date.now();
-      const initialTime = 15;
-      
       timer = setInterval(() => {
         setTimeLeft((prev) => {
            if (prev <= 0) return 0;
@@ -1281,6 +1341,7 @@ const GrowthLabGameComp = memo(({ navigateTo, playSound, profileImageUrl, openCh
     return () => clearInterval(timer);
   }, [gameActive]);
 
+  // Panic Mode Trigger
   useEffect(() => {
       if (gameActive && timeLeft <= 6 && timeLeft > 0 && !panicMode) {
           setPanicMode(true);
@@ -1288,50 +1349,32 @@ const GrowthLabGameComp = memo(({ navigateTo, playSound, profileImageUrl, openCh
       }
   }, [timeLeft, gameActive, panicMode, playSound]);
 
+  // End Game Logic
   useEffect(() => {
       if (timeLeft === 0 && gameActive) {
           setGameActive(false);
           setPanicMode(false);
           playSound(60, 'sawtooth', 0.8);
+          // Clear physics
+          targetsPhysics.current = [];
+          setTargets([]);
           if (score > 150000) onSpell('highscore');
       }
   }, [timeLeft, gameActive, score, onSpell, playSound]);
 
-  useEffect(() => {
-    let spawnInterval;
-    if (gameActive) {
-      spawnInterval = setInterval(() => {
-        setTargets(prev => {
-            if (prev.length >= 8) return prev; 
-            const id = Math.random(); const rand = Math.random();
-            let type = 'lead';
-            if (rand < 0.08) type = 'golden_rocket';
-            else if (rand < 0.30) type = 'spam'; 
-            else if (rand < 0.35) type = 'vip';
-            else if (rand < 0.45) type = 'bad_buzz';
-            else if (rand < 0.47) type = 'clock'; 
-            
-            const isMobile = window.innerWidth < 768;
-            const baseSpeed = isMobile ? 1.5 : 2.5; 
-            const panicSpeed = isMobile ? 2.5 : 4.5;
-            const speedFactor = panicMode ? panicSpeed : baseSpeed;
-
-            const newTarget = { id, x: Math.random() * 80 + 10, y: Math.random() * 70 + 15, type, vx: (Math.random() - 0.5) * speedFactor, vy: (Math.random() - 0.5) * speedFactor };
-            setTimeout(() => setTargets(curr => curr.filter(t => t.id !== id)), 2000); 
-            return [...prev, newTarget];
-        });
-      }, panicMode ? 150 : 280); 
-    }
-    return () => clearInterval(spawnInterval);
-  }, [gameActive, panicMode]);
-
   const startGame = useCallback(() => {
     setScore(0); setTimeLeft(15); setMultiplier(1); setCombo(0);
     setPanicMode(false); setGameActive(true); setClickFeedbacks([]); setShowBriefing(false);
+    setTargets([]); targetsPhysics.current = []; // Reset physics
     playSound(440, 'sine', 0.3);
   }, [playSound]);
 
-  const handleTargetClick = useCallback((type, id, x, y) => {
+  const handleTargetClick = useCallback((type, id, x, y) => { // x, y coming from click event or physics? Passing from click handler is tricky if we don't have current pos in React state.
+    // Actually, we can get current position from physics array easily
+    const targetPhys = targetsPhysics.current.find(t => t.id === id);
+    const currentX = targetPhys ? targetPhys.x : 50;
+    const currentY = targetPhys ? targetPhys.y : 50;
+
     let points = 0; let timeBonus = 0; let msg = ""; let color = "text-emerald-400";
     switch(type) {
       case 'lead': points = 500 * multiplier; msg = "+500 LEADS"; playSound(880 + (combo * 20)); setCombo(prev => prev + 1); break;
@@ -1342,7 +1385,7 @@ const GrowthLabGameComp = memo(({ navigateTo, playSound, profileImageUrl, openCh
       case 'clock': timeBonus = 1; msg = "CONTENT STREAK! +1s"; color = "text-blue-400"; playSound(1200); break;
     }
     const fId = Math.random();
-    setClickFeedbacks(prev => [...prev, { id: fId, x, y, msg, color }]);
+    setClickFeedbacks(prev => [...prev, { id: fId, x: currentX, y: currentY, msg, color }]);
     setTimeout(() => setClickFeedbacks(prev => prev.filter(f => f.id !== fId)), 800);
     setScore(prev => prev + points);
     
@@ -1350,10 +1393,15 @@ const GrowthLabGameComp = memo(({ navigateTo, playSound, profileImageUrl, openCh
         setTimeLeft(prev => Math.max(0, prev + timeBonus));
     }
     
+    // Remove from both React state and Physics engine
     setTargets(prev => prev.filter(t => t.id !== id));
+    targetsPhysics.current = targetsPhysics.current.filter(t => t.id !== id);
+    delete targetElementsRef.current[id];
+
   }, [multiplier, combo, playSound]);
 
   return (
+    // PERF: Added will-change to container for smoother transition
     <div className="pt-24 md:pt-40 pb-24 md:pb-40 px-6 font-black animate-reveal min-h-screen relative flex flex-col items-center justify-start overflow-y-auto" style={{willChange: 'transform', backfaceVisibility: 'hidden'}}>
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,rgba(220,38,38,0.05)_0%,transparent_100%)] -z-10" />
         <div className="max-w-6xl w-full space-y-8 md:space-y-12 relative z-10 py-6 md:py-10 font-black">
@@ -1459,10 +1507,18 @@ const GrowthLabGameComp = memo(({ navigateTo, playSound, profileImageUrl, openCh
                     ) : (
                     <>
                         {clickFeedbacks.map(f => <div key={f.id} style={{ left: `${f.x}%`, top: `${f.y}%` }} className={`absolute pointer-events-none font-black text-xl md:text-3xl uppercase animate-float-out z-50 ${f.color} drop-shadow-[0_0_10px_rgba(0,0,0,1)]`}>{f.msg}</div>)}
+                        {/* PERF: Direct DOM mapping for targets */}
                         {targets.map(t => {
                             const IconComp = t.type === 'lead' ? Users : t.type === 'golden_rocket' ? Rocket : t.type === 'spam' ? ZapOff : t.type === 'vip' ? Crown : t.type === 'bad_buzz' ? Flame : Activity;
                             return (
-                            <div key={t.id} onClick={(e) => { e.stopPropagation(); handleTargetClick(t.type, t.id, t.x, t.y); }} style={{ left: `${t.x}%`, top: `${t.y}%` }} className={`absolute transform -translate-x-1/2 -translate-y-1/2 p-6 md:p-8 rounded-full cursor-pointer transition-all hover:scale-125 z-10 flex items-center justify-center animate-reveal ${t.type === 'lead' ? 'bg-blue-600/30 border-2 border-blue-400 shadow-glow-blue' : ''} ${t.type === 'golden_rocket' ? 'bg-yellow-500/40 border-2 border-white animate-bounce shadow-glow-yellow' : ''} ${t.type === 'spam' ? 'bg-red-900/60 border-2 border-red-600' : ''} ${t.type === 'vip' ? 'bg-purple-600/40 border-2 border-white animate-pulse shadow-glow-purple' : ''} ${t.type === 'bad_buzz' ? 'bg-orange-600/40 border-2 border-orange-500' : ''} ${t.type === 'clock' ? 'bg-blue-400/40 border-2 border-white animate-float shadow-glow-blue' : ''}`}>
+                            <div 
+                                key={t.id} 
+                                ref={el => { if(el) targetElementsRef.current[t.id] = el }}
+                                onClick={(e) => { e.stopPropagation(); handleTargetClick(t.type, t.id); }} 
+                                className={`absolute transform -translate-x-1/2 -translate-y-1/2 p-6 md:p-8 rounded-full cursor-pointer transition-all hover:scale-125 z-10 flex items-center justify-center animate-reveal ${t.type === 'lead' ? 'bg-blue-600/30 border-2 border-blue-400 shadow-glow-blue' : ''} ${t.type === 'golden_rocket' ? 'bg-yellow-500/40 border-2 border-white animate-bounce shadow-glow-yellow' : ''} ${t.type === 'spam' ? 'bg-red-900/60 border-2 border-red-600' : ''} ${t.type === 'vip' ? 'bg-purple-600/40 border-2 border-white animate-pulse shadow-glow-purple' : ''} ${t.type === 'bad_buzz' ? 'bg-orange-600/40 border-2 border-orange-500' : ''} ${t.type === 'clock' ? 'bg-blue-400/40 border-2 border-white animate-float shadow-glow-blue' : ''}`}
+                                // Initial position set here, updated by rAF
+                                style={{ left: '-100px', top: '-100px' }} // Hidden initially until rAF picks it up
+                            >
                                 <IconComp size={28} className={`md:w-8 md:h-8 ${t.type === 'golden_rocket' || t.type === 'clock' ? 'text-white' : ''}`} />
                             </div>
                             );
@@ -1530,6 +1586,85 @@ const GrowthLabGameComp = memo(({ navigateTo, playSound, profileImageUrl, openCh
   );
 });
 
+// PERF: Wrapper to isolate main content from Modal/Chat re-renders
+const MainContent = memo(({ view, profileImageUrl, t, experiences, stackData, testimonials, navigateTo, openChat, playSound, handleDownload, triggerSpell, openModal, copyDiscord, copyFeedback, sayHello }) => {
+    return (
+        <main className="animate-reveal" style={{willChange: 'transform', backfaceVisibility: 'hidden'}}>
+        {view === 'home' && (
+          <>
+            <HeroSection 
+                openChat={openChat} 
+                playSound={playSound} 
+                profileImageUrl={profileImageUrl} 
+                t={t.hero} 
+                handleDownload={handleDownload} 
+                triggerLongPress={() => triggerSpell('longpress')}
+            />
+            <TrustStrip lang={'fr'} t={t.trust} />
+            
+            <section className="py-24 md:py-48 px-6 text-left relative" style={{willChange: 'transform', backfaceVisibility: 'hidden'}}>
+              <div className="max-w-7xl mx-auto space-y-16 md:space-y-32">
+                <div className="flex flex-col md:flex-row justify-between items-end gap-6 md:gap-10">
+                  <div className="space-y-3 md:space-y-4">
+                    <p className="text-red-500 uppercase text-[10px] md:text-[11px] tracking-[0.8em]">{t.stack.title_sub}</p>
+                    <h2 className="text-5xl md:text-7xl lg:text-[100px] font-black text-white tracking-tighter uppercase leading-[0.9] md:leading-[0.8] italic opacity-95">{t.stack.title}</h2>
+                  </div>
+                  <p className="text-slate-500 text-[9px] md:text-[10px] font-black uppercase tracking-[0.4em] max-w-[240px] text-right border-r-2 border-red-600 pr-4 md:pr-6">{t.stack.desc}</p>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8 md:gap-12">
+                  {stackData.map((skill, i) => (
+                    <div key={skill.name} onClick={() => openModal('skill', skill)} className={`group/skill p-8 md:p-12 rounded-[4rem] md:rounded-[5rem] border border-white/5 bg-slate-900/40 hover:bg-red-600 hover:border-red-600 transition-all duration-500 cursor-pointer flex flex-col gap-8 md:gap-12 animate-reveal will-change-transform shadow-2xl`}>
+                      <div className="w-fit p-6 md:p-7 rounded-[2rem] bg-black text-red-500 group-hover:bg-white group-hover:text-red-600 transition-all duration-700 shadow-xl font-black"><skill.icon size={32} className="md:w-10 md:h-10" /></div>
+                      <div className="space-y-3 md:space-y-4">
+                        <p className={`text-[9px] md:text-[10px] font-black uppercase tracking-[0.4em] text-red-500/80 group-hover:text-white/80 font-black`}>{skill.category}</p>
+                        <h4 className={`text-3xl md:text-4xl font-black uppercase tracking-tight leading-none text-slate-100 group-hover:text-white`}>{skill.name}</h4>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+              <div className="hidden lg:block absolute right-4 top-1/2 -translate-y-1/2 w-1 h-32 bg-white/5 rounded-full overflow-hidden">
+                  <div className="w-full h-1/2 bg-red-600 animate-pulse rounded-full"></div>
+              </div>
+            </section>
+
+            <Experiences experiences={experiences} onSpell={triggerSpell} t={t.exp} />
+
+            <section className="py-24 md:py-48 px-6 bg-black/80 md:backdrop-blur-3xl font-black relative" style={{willChange: 'transform', backfaceVisibility: 'hidden'}}>
+               <div className="max-w-6xl mx-auto text-center">
+                  <div className="mb-20 md:mb-32 space-y-4 md:space-y-6"><p className="text-red-500 uppercase text-[10px] md:text-[11px] tracking-[1em]">{t.cursus.sub}</p><h3 className="text-5xl md:text-7xl lg:text-[90px] font-black text-white uppercase tracking-tighter italic opacity-95 leading-none">{t.cursus.title}</h3></div>
+                  <CursusSectionComp t={t.cursus} />
+               </div>
+            </section>
+
+            <TestimonialsSection testimonials={testimonials} t={t.testi} />
+
+            <footer className="py-24 md:py-40 px-6 border-t border-white/5 bg-black text-center font-black relative overflow-hidden">
+              <div className="max-w-4xl mx-auto space-y-12 md:space-y-20">
+                <button onClick={openChat} className="px-12 py-6 md:px-20 md:py-10 bg-red-600 text-white rounded-[2rem] md:rounded-[3rem] font-black uppercase tracking-[0.3em] md:tracking-[0.4em] shadow-glow-red hover:bg-white hover:text-black transition-all active:scale-95 shadow-3xl text-xs md:text-sm">{t.footer.btn}</button>
+                <div className="pt-16 md:pt-24 space-y-6">
+                    <div className="flex justify-center gap-8 md:gap-10">
+                        <a href="https://www.linkedin.com/in/lucien-lukes-1b1a84193/" target="_blank" rel="noopener noreferrer" className="text-slate-600 hover:text-white transition-colors"><Linkedin size={20} className="md:w-6 md:h-6" /></a>
+                        <button className="text-slate-600 hover:text-white transition-colors cursor-pointer"><Mail size={20} className="md:w-6 md:h-6" /></button>
+                    </div>
+                    <p className="text-slate-800 font-black uppercase text-[9px] md:text-[11px] tracking-[1.5em] md:tracking-[2em] opacity-40">{t.footer.copyright}</p>
+                </div>
+              </div>
+            </footer>
+          </>
+        )}
+
+        {view === 'bio' && (
+          <SectionBio profileImageUrl={profileImageUrl} navigateTo={navigateTo} copyDiscord={copyDiscord} copyFeedback={copyFeedback} playSound={playSound} onSpell={triggerSpell} t={t.bio} handleDownload={handleDownload} sayHello={sayHello} />
+        )}
+
+        {view === 'play' && (
+          <GrowthLabGameComp navigateTo={navigateTo} playSound={playSound} profileImageUrl={profileImageUrl} openChat={openChat} onSpell={triggerSpell} t={t.game} />
+        )}
+        </main>
+    );
+});
+
 // --- COMPOSANT APP PRINCIPAL ---
 
 const App = () => {
@@ -1565,11 +1700,10 @@ const App = () => {
 
   const profileImageUrl = "https://res.cloudinary.com/dex721lje/image/upload/v1740686437/photo_de_profil_kvhg3h.png"; 
 
-  // Derived Data based on Lang
   const t = TEXTS[lang];
-  const experiences = getExperiences(lang);
-  const stackData = getStack(lang);
-  const testimonials = getTestimonials(lang);
+  const experiences = useMemo(() => getExperiences(lang), [lang]);
+  const stackData = useMemo(() => getStack(lang), [lang]);
+  const testimonials = useMemo(() => getTestimonials(lang), [lang]);
 
   const playSound = useCallback((freq, type = 'sine', duration = 0.1) => {
     if (isMuted) return; // Mute check
@@ -1611,8 +1745,7 @@ const App = () => {
     window.scrollTo({ top: 0, behavior: 'instant' });
   }, []);
 
-  const triggerSpell = (spellType) => {
-    // Only process if not found yet
+  const triggerSpell = useCallback((spellType) => {
     setFoundSecrets(prev => {
         if (prev.includes(spellType)) return prev;
 
@@ -1645,7 +1778,7 @@ const App = () => {
 
         return [...prev, spellType];
     });
-  };
+  }, [playSound]);
 
   const openModal = useCallback((type, data) => {
     setSelectedData(data);
@@ -1656,6 +1789,10 @@ const App = () => {
   const closeModal = useCallback(() => {
     setModalType(null);
     setSelectedData(null);
+  }, []);
+
+  const openChat = useCallback(() => {
+      setIsChatOpen(true);
   }, []);
 
   const showToast = useCallback((msg) => {
@@ -1684,11 +1821,18 @@ const App = () => {
       showToast(t.bio.hello);
   }, [playSound, t, showToast]);
 
-
+  // PERF: Throttled global scroll listener
   useEffect(() => {
+    let ticking = false;
     const handleScroll = () => {
-      const isScrolled = window.scrollY > 20;
-      setScrolled(prev => prev !== isScrolled ? isScrolled : prev);
+      if (!ticking) {
+          window.requestAnimationFrame(() => {
+              const isScrolled = window.scrollY > 20;
+              setScrolled(prev => prev !== isScrolled ? isScrolled : prev);
+              ticking = false;
+          });
+          ticking = true;
+      }
     };
     window.addEventListener('scroll', handleScroll, { passive: true });
     return () => window.removeEventListener('scroll', handleScroll);
@@ -1708,7 +1852,7 @@ const App = () => {
     setFavicon();
   }, []);
 
-  const handleDownload = () => {
+  const handleDownload = useCallback(() => {
     playSound(400);
     const link = document.createElement('a');
     link.href = 'CV Lucien - 2026.pdf'; 
@@ -1716,9 +1860,13 @@ const App = () => {
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
-  };
+  }, [playSound]);
 
-  if (!t) return null; // Safe guard if text is loading or undefined
+  const toggleMute = useCallback(() => {
+      setIsMuted(prev => !prev);
+  }, []);
+
+  if (!t) return null;
 
   return (
     <div className={`min-h-screen bg-[#020202] text-slate-300 font-sans selection:bg-red-600 selection:text-white overflow-x-hidden font-black`}>
@@ -1754,82 +1902,26 @@ const App = () => {
         <p>Expert en management de créateurs de contenu et scaling infrastructure.</p>
       </div>
 
-      <Navbar scrolled={scrolled} view={view} navigateTo={navigateTo} openChat={() => setIsChatOpen(true)} lang={lang} setLang={setLang} t={t.nav} isMuted={isMuted} toggleMute={() => setIsMuted(!isMuted)} />
+      <Navbar scrolled={scrolled} view={view} navigateTo={navigateTo} openChat={openChat} lang={lang} setLang={setLang} t={t.nav} isMuted={isMuted} toggleMute={toggleMute} />
       <ScrollProgress />
 
-      <main className="animate-reveal" style={{willChange: 'transform', backfaceVisibility: 'hidden'}}>
-        {view === 'home' && (
-          <>
-            <HeroSection 
-                openChat={() => setIsChatOpen(true)} 
-                playSound={playSound} 
-                profileImageUrl={profileImageUrl} 
-                t={t.hero} 
-                handleDownload={handleDownload} 
-                triggerLongPress={() => triggerSpell('longpress')}
-            />
-            <TrustStrip lang={lang} t={t.trust} />
-            
-            <section className="py-24 md:py-48 px-6 text-left relative" style={{willChange: 'transform', backfaceVisibility: 'hidden'}}>
-              <div className="max-w-7xl mx-auto space-y-16 md:space-y-32">
-                <div className="flex flex-col md:flex-row justify-between items-end gap-6 md:gap-10">
-                  <div className="space-y-3 md:space-y-4">
-                    <p className="text-red-500 uppercase text-[10px] md:text-[11px] tracking-[0.8em]">{t.stack.title_sub}</p>
-                    <h2 className="text-5xl md:text-7xl lg:text-[100px] font-black text-white tracking-tighter uppercase leading-[0.9] md:leading-[0.8] italic opacity-95">{t.stack.title}</h2>
-                  </div>
-                  <p className="text-slate-500 text-[9px] md:text-[10px] font-black uppercase tracking-[0.4em] max-w-[240px] text-right border-r-2 border-red-600 pr-4 md:pr-6">{t.stack.desc}</p>
-                </div>
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8 md:gap-12">
-                  {stackData.map((skill, i) => (
-                    <div key={skill.name} onClick={() => openModal('skill', skill)} className={`group/skill p-8 md:p-12 rounded-[4rem] md:rounded-[5rem] border border-white/5 bg-slate-900/40 hover:bg-red-600 hover:border-red-600 transition-all duration-500 cursor-pointer flex flex-col gap-8 md:gap-12 animate-reveal will-change-transform shadow-2xl`}>
-                      <div className="w-fit p-6 md:p-7 rounded-[2rem] bg-black text-red-500 group-hover:bg-white group-hover:text-red-600 transition-all duration-700 shadow-xl font-black"><skill.icon size={32} className="md:w-10 md:h-10" /></div>
-                      <div className="space-y-3 md:space-y-4">
-                        <p className={`text-[9px] md:text-[10px] font-black uppercase tracking-[0.4em] text-red-500/80 group-hover:text-white/80 font-black`}>{skill.category}</p>
-                        <h4 className={`text-3xl md:text-4xl font-black uppercase tracking-tight leading-none text-slate-100 group-hover:text-white`}>{skill.name}</h4>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-              <div className="hidden lg:block absolute right-4 top-1/2 -translate-y-1/2 w-1 h-32 bg-white/5 rounded-full overflow-hidden">
-                  <div className="w-full h-1/2 bg-red-600 animate-pulse rounded-full"></div>
-              </div>
-            </section>
-
-            <Experiences experiences={experiences} onSpell={triggerSpell} t={t.exp} />
-
-            <section className="py-24 md:py-48 px-6 bg-black/80 md:backdrop-blur-3xl font-black relative" style={{willChange: 'transform', backfaceVisibility: 'hidden'}}>
-               <div className="max-w-6xl mx-auto text-center">
-                  <div className="mb-20 md:mb-32 space-y-4 md:space-y-6"><p className="text-red-500 uppercase text-[10px] md:text-[11px] tracking-[1em]">{t.cursus.sub}</p><h3 className="text-5xl md:text-7xl lg:text-[90px] font-black text-white uppercase tracking-tighter italic opacity-95 leading-none">{t.cursus.title}</h3></div>
-                  <CursusSectionComp t={t.cursus} />
-               </div>
-            </section>
-
-            <TestimonialsSection testimonials={testimonials} t={t.testi} />
-
-            <footer className="py-24 md:py-40 px-6 border-t border-white/5 bg-black text-center font-black relative overflow-hidden">
-              <div className="max-w-4xl mx-auto space-y-12 md:space-y-20">
-                <button onClick={() => setIsChatOpen(true)} className="px-12 py-6 md:px-20 md:py-10 bg-red-600 text-white rounded-[2rem] md:rounded-[3rem] font-black uppercase tracking-[0.3em] md:tracking-[0.4em] shadow-glow-red hover:bg-white hover:text-black transition-all active:scale-95 shadow-3xl text-xs md:text-sm">{t.footer.btn}</button>
-                <div className="pt-16 md:pt-24 space-y-6">
-                    <div className="flex justify-center gap-8 md:gap-10">
-                        <a href="https://www.linkedin.com/in/lucien-lukes-1b1a84193/" target="_blank" rel="noopener noreferrer" className="text-slate-600 hover:text-white transition-colors"><Linkedin size={20} className="md:w-6 md:h-6" /></a>
-                        <button onClick={copyEmail} className="text-slate-600 hover:text-white transition-colors cursor-pointer"><Mail size={20} className="md:w-6 md:h-6" /></button>
-                    </div>
-                    <p className="text-slate-800 font-black uppercase text-[9px] md:text-[11px] tracking-[1.5em] md:tracking-[2em] opacity-40">{t.footer.copyright}</p>
-                </div>
-              </div>
-            </footer>
-          </>
-        )}
-
-        {view === 'bio' && (
-          <SectionBio profileImageUrl={profileImageUrl} navigateTo={navigateTo} copyDiscord={copyDiscord} copyFeedback={copyFeedback} playSound={playSound} onSpell={triggerSpell} t={t.bio} handleDownload={handleDownload} sayHello={sayHello} />
-        )}
-
-        {view === 'play' && (
-          <GrowthLabGameComp navigateTo={setView} playSound={playSound} profileImageUrl={profileImageUrl} openChat={() => setIsChatOpen(true)} onSpell={triggerSpell} t={t.game} />
-        )}
-      </main>
+      <MainContent 
+        view={view}
+        profileImageUrl={profileImageUrl}
+        t={t}
+        experiences={experiences}
+        stackData={stackData}
+        testimonials={testimonials}
+        navigateTo={navigateTo}
+        openChat={openChat}
+        playSound={playSound}
+        handleDownload={handleDownload}
+        triggerSpell={triggerSpell}
+        openModal={openModal}
+        copyDiscord={copyDiscord}
+        copyFeedback={copyFeedback}
+        sayHello={sayHello}
+      />
 
       <Modal isOpen={!!modalType} onClose={closeModal}>
         {modalType === 'skill' && selectedData && (
@@ -1860,7 +1952,7 @@ const App = () => {
                     ))}
                   </div>
               </div>
-              <button onClick={() => { setModalType(null); setIsChatOpen(true); }} className="w-full bg-white text-black font-black py-6 md:py-8 rounded-[2rem] md:rounded-[2.5rem] uppercase tracking-widest text-[9px] md:text-[10px] hover:bg-red-600 hover:text-white transition-all active:scale-95 border-2 border-transparent">{t.modal.btn}</button>
+              <button onClick={() => { closeModal(); openChat(); }} className="w-full bg-white text-black font-black py-6 md:py-8 rounded-[2rem] md:rounded-[2.5rem] uppercase tracking-widest text-[9px] md:text-[10px] hover:bg-red-600 hover:text-white transition-all active:scale-95 border-2 border-transparent">{t.modal.btn}</button>
             </div>
           </div>
         )}
