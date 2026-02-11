@@ -65,7 +65,7 @@ const TEXTS = {
       iscom: { title: "ISCOM", sub: "Bachelor Communication & Pub" }
     },
     testi: { sub: "Confiance", title: "Parole de Pro." },
-    footer: { btn: "Collaborer maintenant", copyright: "LUCIEN LUKES — PORTFOLIO 2024" },
+    footer: { btn: "Collaborer maintenant", copyright: "Développé par Lucien LUKES" },
     bio: {
       sub: "À Propos",
       title: "Bio.",
@@ -189,7 +189,7 @@ const TEXTS = {
       iscom: { title: "ISCOM", sub: "Bachelor Communication & Ads" }
     },
     testi: { sub: "Trust", title: "Pro Talk." },
-    footer: { btn: "Collaborate Now", copyright: "LUCIEN LUKES — PORTFOLIO 2024" },
+    footer: { btn: "Collaborate Now", copyright: "Developed by Lucien LUKES" },
     bio: {
       sub: "About",
       title: "Bio.",
@@ -343,15 +343,15 @@ const TrustStrip = memo(({ lang, t }) => (
 ));
 
 const TestimonialsSection = memo(({ testimonials, t }) => (
-  <section className="py-24 md:py-40 px-6 relative font-black border-t border-white/5">
-    <div className="max-w-7xl mx-auto space-y-16 md:space-y-24">
+  <section className="py-20 md:py-40 px-6 relative font-black border-t border-white/5">
+    <div className="max-w-7xl mx-auto space-y-12 md:space-y-24">
       <div className="text-center space-y-4">
         <p className="text-red-500 font-black uppercase text-[10px] md:text-[11px] tracking-[0.8em]">{t.sub}</p>
         <h2 className="text-4xl md:text-7xl font-black text-white uppercase tracking-tighter italic">{t.title}</h2>
       </div>
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 md:gap-8">
         {testimonials.map((t) => (
-          <div key={t.id} className="bg-white/5 border border-white/10 p-8 rounded-[2rem] flex flex-col gap-6 hover:border-red-600/50 transition-colors">
+          <div key={t.id} className="bg-white/5 border border-white/10 p-6 md:p-8 rounded-[2rem] flex flex-col gap-6 hover:border-red-600/50 transition-colors">
             <div className="flex gap-1">
               {[...Array(5)].map((_, i) => <Star key={i} size={14} className="text-yellow-500 fill-yellow-500" />)}
             </div>
@@ -596,7 +596,7 @@ const Navbar = memo(({ scrolled, view, navigateTo, openChat, lang, setLang, t })
   );
 });
 
-const HeroSection = memo(({ openChat, playSound, profileImageUrl, t }) => (
+const HeroSection = memo(({ openChat, playSound, profileImageUrl, t, handleDownload }) => (
   <section id="hero" className="relative pt-32 md:pt-72 pb-16 md:pb-32 px-6 overflow-hidden font-black">
     <div className="absolute top-0 left-0 w-full h-full bg-gradient-to-b from-red-900/10 via-transparent to-[#020202] -z-10" />
     <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full h-[800px] md:h-[1200px] bg-[radial-gradient(circle_at_50%_0%,rgba(220,38,38,0.15)_0%,transparent_70%)] -z-10" />
@@ -613,12 +613,12 @@ const HeroSection = memo(({ openChat, playSound, profileImageUrl, t }) => (
         <p className="text-lg md:text-3xl text-slate-400 max-w-2xl leading-relaxed font-light border-l-4 border-red-600 pl-6 md:pl-10 italic transition-all hover:text-white duration-500 animate-fade-in-up delay-200">
           "{t.sub}"
         </p>
-        <div className="flex flex-wrap gap-4 md:gap-8 pt-6 animate-fade-in-up delay-300">
-          <button onClick={openChat} className="relative group bg-red-600 text-white px-8 py-4 md:px-12 md:py-6 rounded-2xl font-black uppercase tracking-[0.2em] md:tracking-[0.3em] text-xs md:text-sm shadow-glow-red transition-all hover:-translate-y-2 active:scale-95 overflow-hidden">
+        <div className="flex flex-col md:flex-row flex-wrap gap-4 md:gap-8 pt-6 animate-fade-in-up delay-300">
+          <button onClick={openChat} className="w-full md:w-auto relative group bg-red-600 text-white px-8 py-4 md:px-12 md:py-6 rounded-2xl font-black uppercase tracking-[0.2em] md:tracking-[0.3em] text-xs md:text-sm shadow-glow-red transition-all hover:-translate-y-2 active:scale-95 overflow-hidden">
             <div className="absolute inset-0 bg-white/10 translate-y-full group-hover:translate-y-0 transition-transform duration-500" />
-            <span className="relative z-10 flex items-center gap-3 font-black">{t.btn_work} <ArrowRight size={20} className="group-hover:translate-x-2 transition-transform" /></span>
+            <span className="relative z-10 flex items-center justify-center gap-3 font-black">{t.btn_work} <ArrowRight size={20} className="group-hover:translate-x-2 transition-transform" /></span>
           </button>
-          <button onClick={() => { playSound(400); window.open("https://www.pdf2go.com/fr/result#j=16157afc-8748-4ec1-975b-5ca853900820", "_blank"); }} className="flex items-center gap-4 md:gap-6 bg-white/5 border border-white/10 px-8 py-4 md:px-10 md:py-6 rounded-2xl hover:bg-white/10 hover:-translate-y-2 transition-all group border-b-4 border-b-red-500/20 shadow-2xl font-black uppercase text-[10px] md:text-[11px] tracking-widest">{t.btn_cv} <Download size={20} className="text-red-500 ml-2" /></button>
+          <button onClick={handleDownload} className="w-full md:w-auto flex items-center justify-center gap-4 md:gap-6 bg-white/5 border border-white/10 px-8 py-4 md:px-10 md:py-6 rounded-2xl hover:bg-white/10 hover:-translate-y-2 transition-all group border-b-4 border-b-red-500/20 shadow-2xl font-black uppercase text-[10px] md:text-[11px] tracking-widest">{t.btn_cv} <Download size={20} className="text-red-500 ml-2" /></button>
         </div>
       </div>
       <div className="lg:col-span-4 relative group animate-reveal delay-500 hidden lg:block pr-12">
@@ -654,19 +654,25 @@ const Experiences = memo(({ experiences, onSpell, t }) => {
   const progressRef = useRef(null);
 
   useEffect(() => {
+    let rafId;
     const handleScroll = () => {
-      if (!containerRef.current || !progressRef.current) return;
-      const rect = containerRef.current.getBoundingClientRect();
-      const windowHeight = window.innerHeight;
-      const progress = Math.min(Math.max(- (rect.top - windowHeight) / rect.height, 0), 1);
-      progressRef.current.style.transform = `scaleY(${progress})`;
+      rafId = requestAnimationFrame(() => {
+        if (!containerRef.current || !progressRef.current) return;
+        const rect = containerRef.current.getBoundingClientRect();
+        const windowHeight = window.innerHeight;
+        const progress = Math.min(Math.max(- (rect.top - windowHeight) / rect.height, 0), 1);
+        progressRef.current.style.transform = `scaleY(${progress})`;
+      });
     };
     window.addEventListener('scroll', handleScroll, { passive: true });
-    return () => window.removeEventListener('scroll', handleScroll);
+    return () => {
+        window.removeEventListener('scroll', handleScroll);
+        cancelAnimationFrame(rafId);
+    }
   }, []);
 
   return (
-    <section id="missions" ref={containerRef} className="py-24 md:py-56 px-6 relative font-black">
+    <section id="missions" ref={containerRef} className="py-20 md:py-56 px-6 relative font-black">
       <div className="absolute top-0 left-0 w-full h-full bg-gradient-to-b from-transparent via-red-600/5 to-transparent -z-10" />
       <div className="max-w-6xl mx-auto space-y-16 md:space-y-32">
         <div className="text-center space-y-6">
@@ -681,7 +687,7 @@ const Experiences = memo(({ experiences, onSpell, t }) => {
           {experiences.map((exp, i) => (
             <div key={i} className={`relative flex flex-col md:flex-row items-center gap-10 md:gap-20 group ${i % 2 === 0 ? 'md:flex-row' : 'md:flex-row-reverse'} animate-reveal font-black`}>
               <div className="absolute left-[20px] md:left-1/2 md:-translate-x-1/2 w-10 h-10 rounded-full bg-black border-4 border-red-600 z-20 group-hover:scale-150 transition-all duration-500 hidden md:block shadow-glow-red font-black" />
-              <div className={`w-full md:w-[45%] p-8 md:p-16 rounded-[3rem] md:rounded-[5rem] transition-all duration-1000 relative overflow-hidden font-black ${exp.isPoudlard ? 'bg-[#0a0a0a] border-amber-500/40 shadow-2xl ring-1 ring-amber-500/20' : 'bg-slate-900/60 border-white/5 backdrop-blur-3xl hover:bg-slate-900 group-hover:border-red-500/40 shadow-3xl'}`}>
+              <div className={`w-full md:w-[45%] p-6 md:p-16 rounded-[3rem] md:rounded-[5rem] transition-all duration-1000 relative overflow-hidden font-black ${exp.isPoudlard ? 'bg-[#0a0a0a] border-amber-500/40 shadow-2xl ring-1 ring-amber-500/20' : 'bg-slate-900/60 border-white/5 backdrop-blur-3xl hover:bg-slate-900 group-hover:border-red-500/40 shadow-3xl'}`}>
                 {exp.isPoudlard && <div className="absolute top-0 right-0 bg-amber-500 px-6 py-3 md:px-10 md:py-4 rounded-bl-[2rem] md:rounded-bl-[2.5rem] font-black text-[9px] md:text-[11px] text-black tracking-widest uppercase flex items-center gap-2 md:gap-3 shadow-2xl font-black"><span className="animate-spin-slow"><Sparkle size={14} fill="black" /></span> Projet Pilier</div>}
                 <div className="space-y-8 md:space-y-12 font-black">
                   <div className="space-y-4 font-black">
@@ -752,7 +758,7 @@ const CursusSectionComp = memo(({ t }) => (
   </div>
 ));
 
-const SectionBio = memo(({ profileImageUrl, navigateTo, copyDiscord, copyFeedback, playSound, onSpell, t }) => (
+const SectionBio = memo(({ profileImageUrl, navigateTo, copyDiscord, copyFeedback, playSound, onSpell, t, handleDownload }) => (
   <div className="pt-24 md:pt-40 pb-16 md:pb-24 px-6 animate-reveal font-black">
     <div className="max-w-7xl mx-auto">
       <div className="mb-12 md:mb-20 space-y-6">
@@ -786,7 +792,7 @@ const SectionBio = memo(({ profileImageUrl, navigateTo, copyDiscord, copyFeedbac
               <span className="text-[9px] md:text-[10px] font-black uppercase tracking-widest">{copyFeedback ? "Copié !" : "Discord"}</span>
             </button>
           </div>
-          <button onClick={() => { playSound(400); window.open("https://www.pdf2go.com/fr/result#j=16157afc-8748-4ec1-975b-5ca853900820", "_blank"); }} className="w-full bg-red-600 hover:bg-white hover:text-black text-white p-5 md:p-6 rounded-3xl flex items-center justify-center gap-4 transition-all font-black uppercase text-xs tracking-widest shadow-glow-red">
+          <button onClick={handleDownload} className="w-full bg-red-600 hover:bg-white hover:text-black text-white p-5 md:p-6 rounded-3xl flex items-center justify-center gap-4 transition-all font-black uppercase text-xs tracking-widest shadow-glow-red">
             <Download size={18} /> {t.dl}
           </button>
         </div>
@@ -1278,6 +1284,16 @@ const App = () => {
     setFavicon();
   }, []);
 
+  const handleDownload = () => {
+    playSound(400);
+    const link = document.createElement('a');
+    link.href = 'CV Lucien - 2026.pdf'; 
+    link.download = 'CV Lucien - 2026.pdf';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
   return (
     <div className={`min-h-screen bg-[#020202] text-slate-300 font-sans selection:bg-red-600 selection:text-white overflow-x-hidden font-black`}>
       <div className="fixed inset-0 pointer-events-none -z-50 bg-[#020202]">
@@ -1313,7 +1329,7 @@ const App = () => {
       <main className="animate-reveal">
         {view === 'home' && (
           <>
-            <HeroSection openChat={() => setIsChatOpen(true)} playSound={playSound} profileImageUrl={profileImageUrl} t={t.hero} />
+            <HeroSection openChat={() => setIsChatOpen(true)} playSound={playSound} profileImageUrl={profileImageUrl} t={t.hero} handleDownload={handleDownload} />
             <TrustStrip lang={lang} t={t.trust} />
             
             <section className="py-24 md:py-48 px-6 text-left">
@@ -1356,8 +1372,6 @@ const App = () => {
                 <div className="pt-16 md:pt-24 space-y-6">
                     <div className="flex justify-center gap-8 md:gap-10">
                         <a href="https://www.linkedin.com/in/lucien-lukes-1b1a84193/" target="_blank" rel="noopener noreferrer" className="text-slate-600 hover:text-white transition-colors"><Linkedin size={20} className="md:w-6 md:h-6" /></a>
-                        <a href="#" className="text-slate-600 hover:text-white transition-colors"><Github size={20} className="md:w-6 md:h-6" /></a>
-                        <a href="#" className="text-slate-600 hover:text-white transition-colors"><Mail size={20} className="md:w-6 md:h-6" /></a>
                     </div>
                     <p className="text-slate-800 font-black uppercase text-[9px] md:text-[11px] tracking-[1.5em] md:tracking-[2em] opacity-40">{t.footer.copyright}</p>
                 </div>
@@ -1367,7 +1381,7 @@ const App = () => {
         )}
 
         {view === 'bio' && (
-          <SectionBio profileImageUrl={profileImageUrl} navigateTo={navigateTo} copyDiscord={copyDiscord} copyFeedback={copyFeedback} playSound={playSound} onSpell={triggerSpell} t={t.bio} />
+          <SectionBio profileImageUrl={profileImageUrl} navigateTo={navigateTo} copyDiscord={copyDiscord} copyFeedback={copyFeedback} playSound={playSound} onSpell={triggerSpell} t={t.bio} handleDownload={handleDownload} />
         )}
 
         {view === 'play' && (
