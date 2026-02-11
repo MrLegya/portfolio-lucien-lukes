@@ -279,7 +279,7 @@ const TEXTS = {
   }
 };
 
-// Data Factories for Translation
+// Data Factories
 const getTestimonials = (lang) => [
   { id: 1, name: "Thomas", role: lang === 'fr' ? "Fondateur Serveur SkyBlock (FR)" : "SkyBlock Server Founder", text: lang === 'fr' ? "On stagnait à 50 joueurs simultanés. Après l'audit de Lucien et la refonte de l'acquisition, on a tapé les 500 en un mois. Il connait les codes par coeur." : "We were stuck at 50 concurrent players. After Lucien's audit and acquisition overhaul, we hit 500 in a month. He knows the codes by heart." },
   { id: 2, name: "Sarah L.", role: "CMO - SaaS B2B", text: lang === 'fr' ? "J'avais peur de l'approche 'gaming' pour notre boîte très corporate. Finalement, c'est cette créativité qui nous a permis de débloquer notre coût par lead. Bluffant." : "I was afraid of the 'gaming' approach for our corporate company. Ultimately, this creativity unlocked our cost per lead. Stunning." },
@@ -324,6 +324,38 @@ const getStack = (lang) => [
 
 // --- COMPOSANTS ---
 
+const ScrollProgress = memo(() => {
+  const [scrollProgress, setScrollProgress] = useState(0);
+
+  useEffect(() => {
+    let rafId;
+    const updateScroll = () => {
+        const totalHeight = document.documentElement.scrollHeight - window.innerHeight;
+        const progress = (window.scrollY / totalHeight) * 100;
+        setScrollProgress(progress);
+    };
+
+    const handleScroll = () => {
+       rafId = requestAnimationFrame(updateScroll);
+    };
+
+    window.addEventListener('scroll', handleScroll);
+    return () => {
+        window.removeEventListener('scroll', handleScroll);
+        cancelAnimationFrame(rafId);
+    };
+  }, []);
+
+  return (
+    <div className="fixed top-0 right-0 h-full w-1.5 bg-white/5 z-[90] hidden md:block">
+      <div 
+        className="bg-red-600 w-full transition-all duration-100 ease-out will-change-transform"
+        style={{ height: `${scrollProgress}%` }}
+      />
+    </div>
+  );
+});
+
 const TrustStrip = memo(({ lang, t }) => (
   <>
     <div className="py-6 md:py-10 border-y border-white/5 bg-white/[0.02] overflow-hidden backdrop-blur-sm relative z-30">
@@ -343,7 +375,7 @@ const TrustStrip = memo(({ lang, t }) => (
 ));
 
 const TestimonialsSection = memo(({ testimonials, t }) => (
-  <section className="py-20 md:py-40 px-6 relative font-black border-t border-white/5">
+  <section className="py-16 md:py-40 px-6 relative font-black border-t border-white/5">
     <div className="max-w-7xl mx-auto space-y-12 md:space-y-24">
       <div className="text-center space-y-4">
         <p className="text-red-500 font-black uppercase text-[10px] md:text-[11px] tracking-[0.8em]">{t.sub}</p>
@@ -672,24 +704,24 @@ const Experiences = memo(({ experiences, onSpell, t }) => {
   }, []);
 
   return (
-    <section id="missions" ref={containerRef} className="py-20 md:py-56 px-6 relative font-black">
+    <section id="missions" ref={containerRef} className="py-16 md:py-56 px-6 relative font-black">
       <div className="absolute top-0 left-0 w-full h-full bg-gradient-to-b from-transparent via-red-600/5 to-transparent -z-10" />
-      <div className="max-w-6xl mx-auto space-y-16 md:space-y-32">
+      <div className="max-w-6xl mx-auto space-y-12 md:space-y-32">
         <div className="text-center space-y-6">
             <p className="text-red-500 font-black uppercase text-[11px] tracking-[1em] animate-pulse">{t.roadmap}</p>
-            <h2 className="text-5xl md:text-7xl lg:text-[100px] font-black text-white tracking-tighter uppercase relative z-10 leading-[0.9] md:leading-[0.8] italic font-black">{t.title}</h2>
+            <h2 className="text-4xl md:text-7xl lg:text-[100px] font-black text-white tracking-tighter uppercase relative z-10 leading-[0.9] md:leading-[0.8] italic font-black">{t.title}</h2>
         </div>
-        <div className="relative space-y-16 md:space-y-32 text-left">
+        <div className="relative space-y-12 md:space-y-32 text-left">
           <div className="absolute left-[31px] md:left-1/2 top-0 bottom-0 w-[4px] bg-white/5 hidden md:block overflow-hidden rounded-full shadow-inner font-black">
               <div ref={progressRef} className="absolute top-0 left-0 w-full bg-gradient-to-b from-red-600 via-orange-500 to-red-400 origin-top transition-transform duration-150 ease-out will-change-transform font-black" style={{ height: '100%', transform: 'scaleY(0)' }} />
           </div>
 
           {experiences.map((exp, i) => (
-            <div key={i} className={`relative flex flex-col md:flex-row items-center gap-10 md:gap-20 group ${i % 2 === 0 ? 'md:flex-row' : 'md:flex-row-reverse'} animate-reveal font-black`}>
+            <div key={i} className={`relative flex flex-col md:flex-row items-center gap-8 md:gap-20 group ${i % 2 === 0 ? 'md:flex-row' : 'md:flex-row-reverse'} animate-reveal font-black`}>
               <div className="absolute left-[20px] md:left-1/2 md:-translate-x-1/2 w-10 h-10 rounded-full bg-black border-4 border-red-600 z-20 group-hover:scale-150 transition-all duration-500 hidden md:block shadow-glow-red font-black" />
-              <div className={`w-full md:w-[45%] p-6 md:p-16 rounded-[3rem] md:rounded-[5rem] transition-all duration-1000 relative overflow-hidden font-black ${exp.isPoudlard ? 'bg-[#0a0a0a] border-amber-500/40 shadow-2xl ring-1 ring-amber-500/20' : 'bg-slate-900/60 border-white/5 backdrop-blur-3xl hover:bg-slate-900 group-hover:border-red-500/40 shadow-3xl'}`}>
+              <div className={`w-full md:w-[45%] p-6 md:p-16 rounded-[2rem] md:rounded-[5rem] transition-all duration-1000 relative overflow-hidden font-black ${exp.isPoudlard ? 'bg-[#0a0a0a] border-amber-500/40 shadow-2xl ring-1 ring-amber-500/20' : 'bg-slate-900/60 border-white/5 backdrop-blur-3xl hover:bg-slate-900 group-hover:border-red-500/40 shadow-3xl'}`}>
                 {exp.isPoudlard && <div className="absolute top-0 right-0 bg-amber-500 px-6 py-3 md:px-10 md:py-4 rounded-bl-[2rem] md:rounded-bl-[2.5rem] font-black text-[9px] md:text-[11px] text-black tracking-widest uppercase flex items-center gap-2 md:gap-3 shadow-2xl font-black"><span className="animate-spin-slow"><Sparkle size={14} fill="black" /></span> Projet Pilier</div>}
-                <div className="space-y-8 md:space-y-12 font-black">
+                <div className="space-y-6 md:space-y-12 font-black">
                   <div className="space-y-4 font-black">
                     <span className={`${exp.isPoudlard ? 'text-amber-500' : 'text-red-600'} font-black text-[10px] md:text-[11px] tracking-[0.4em] md:tracking-[0.6em] uppercase`}>{exp.period}</span>
                     {exp.link ? (
@@ -1325,6 +1357,7 @@ const App = () => {
       </div>
 
       <Navbar scrolled={scrolled} view={view} navigateTo={navigateTo} openChat={() => setIsChatOpen(true)} lang={lang} setLang={setLang} t={t.nav} />
+      <ScrollProgress />
 
       <main className="animate-reveal">
         {view === 'home' && (
@@ -1429,7 +1462,7 @@ const App = () => {
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&display=swap');
         :root { scroll-behavior: smooth; }
-        body { font-family: 'Inter', sans-serif; background: #020202; overflow-x: hidden; }
+        body { font-family: 'Inter', sans-serif; background: #020202; overflow-x: hidden; touch-action: pan-y; }
         .animate-reveal { animation: reveal 0.6s cubic-bezier(0.19, 1, 0.22, 1) forwards; }
         @keyframes reveal { from { opacity: 0; transform: translateY(15px); } to { opacity: 1; transform: translateY(0); } }
         @keyframes reveal-bottom { from { opacity: 0; transform: translateY(50px); } to { opacity: 1; transform: translateY(0); } }
