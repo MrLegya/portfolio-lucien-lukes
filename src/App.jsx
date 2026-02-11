@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback, memo } from 'react';
+import React, { useState, useEffect, useRef, useCallback, memo, useMemo } from 'react';
 import { 
   Rocket, Users, Target, Mail, Gamepad2, Zap, ArrowRight,
   Search, Share2, MessageCircle, Cpu, Layers, 
@@ -8,14 +8,22 @@ import {
   School, Coins, Activity, Flame, Crown, 
   Download, User, ZapOff, 
   MapPin, ChevronDown, Sparkle, Brain, Focus, Workflow,
-  Linkedin, Github, Briefcase as Job, Megaphone, Compass, Menu, Hash, Clock
+  Linkedin, Github, Briefcase as Job, Megaphone, Compass, Menu, Hash, Clock,
+  Volume2, VolumeX, Copy, Bell, Gift, PieChart, BarChart3, Sliders,
+  HelpCircle, Check, Unlock, MousePointer2, Keyboard, Fingerprint, FileText, Crosshair, ListTodo, Info, XCircle
 } from 'lucide-react';
 
 // --- CONFIGURATION SYSTÈME SONORE ---
 const audioSystem = {
   ctx: null,
   get() {
-    if (!this.ctx) this.ctx = new (window.AudioContext || window.webkitAudioContext)();
+    if (typeof window === 'undefined') return null;
+    if (!this.ctx) {
+      const AudioContext = window.AudioContext || window.webkitAudioContext;
+      if (AudioContext) {
+        this.ctx = new AudioContext();
+      }
+    }
     return this.ctx;
   }
 };
@@ -86,7 +94,10 @@ const TEXTS = {
       env: "Environnement",
       back: "Retour à l'expertise",
       avail: "Disponible",
-      loc: "Montpellier / Remote"
+      loc: "Montpellier / Remote",
+      hello: "Salut toi ! 👋",
+      radar_title: "PROFIL HYBRIDE",
+      stack_title: "Marketing Stack"
     },
     game: {
       title: "Influence",
@@ -145,12 +156,30 @@ const TEXTS = {
       btn_send: "Envoyer la demande",
       success_title: "Bien reçu !",
       success_msg: "Je viens de recevoir votre brief. Je l'analyse et je reviens vers vous sous 24h à l'adresse",
-      close: "Fermer"
+      close: "Fermer",
+      quest_bonus: "Mission Accomplie : -5% sur votre devis !",
+      certified_badge: "Expert Certifié"
     },
     modal: {
       strat: "Concept stratégique",
       ops: "Opérations clés",
       btn: "Propulser ce levier"
+    },
+    toast: {
+      email_copied: "Email copié dans le presse-papier !",
+      discord_copied: "Discord copié !"
+    },
+    quest: {
+      title: "Quêtes secondaires",
+      instruction: "Complétez les objectifs ci-dessous pour débloquer -5% de réduction sur votre prochaine mission freelance.",
+      tip: "Indice : Cherchez des mots cachés dans le texte (cliquez dessus) et prouvez votre valeur au jeu.",
+      progress: "Avancement",
+      locked: "En cours...",
+      unlocked: "Badge Expert Débloqué",
+      congrats: "Mission Accomplie !",
+      benefit: "Récompense : -5% sur le devis",
+      task_words: "Trouver les 3 mots cachés",
+      task_score: "Faire +150k pts au Growth Lab"
     }
   },
   en: {
@@ -196,7 +225,7 @@ const TEXTS = {
       dl: "Download CV",
       intro_1: "I am",
       intro_2: "Lucien.",
-      job: "Growth Architect & Influence Consultant",
+      job: "Growth Architect & Consultant Influence",
       p1_bold: "I don't just 'do' digital.",
       p1: "I help projects structure themselves, find their audience, and scale up.",
       p2_bold: "gaming, tech, social platforms",
@@ -210,7 +239,10 @@ const TEXTS = {
       env: "Environment",
       back: "Back to Expertise",
       avail: "Available",
-      loc: "Montpellier / Remote"
+      loc: "Montpellier / Remote",
+      hello: "Hey there! 👋",
+      radar_title: "HYBRID PROFILE",
+      stack_title: "Marketing Stack"
     },
     game: {
       title: "Influence",
@@ -269,12 +301,30 @@ const TEXTS = {
       btn_send: "Send Request",
       success_title: "Received!",
       success_msg: "I just received your brief. I'll analyze it and get back to you within 24h at",
-      close: "Close"
+      close: "Close",
+      quest_bonus: "Mission Accomplished: -5% on your quote!",
+      certified_badge: "Expert Certified"
     },
     modal: {
       strat: "Strategic Concept",
       ops: "Key Operations",
       btn: "Boost this lever"
+    },
+    toast: {
+      email_copied: "Email copied to clipboard!",
+      discord_copied: "Discord copied!"
+    },
+    quest: {
+      title: "Side Quests",
+      instruction: "Complete the objectives below to unlock a 5% discount on your next freelance mission.",
+      tip: "Hint: Find hidden keywords and prove your skill in the simulation.",
+      progress: "Sequence",
+      locked: "Pending...",
+      unlocked: "Expert Access Granted",
+      congrats: "Access Granted!",
+      benefit: "Bonus: -5% on quote",
+      task_words: "Decrypt Story (Keywords)",
+      task_score: "Overload Simulation (Score)"
     }
   }
 };
@@ -324,6 +374,247 @@ const getStack = (lang) => [
 
 // --- COMPOSANTS ---
 
+const Toast = memo(({ message, onClose }) => {
+    useEffect(() => {
+        const timer = setTimeout(onClose, 3000);
+        return () => clearTimeout(timer);
+    }, [onClose]);
+
+    return (
+        <div className="fixed bottom-8 left-1/2 -translate-x-1/2 z-[2000] bg-white text-black px-6 py-3 rounded-full shadow-2xl flex items-center gap-3 font-black text-xs uppercase tracking-wider animate-fade-in-up">
+            <CheckCircle size={16} className="text-emerald-500" />
+            {message}
+        </div>
+    );
+});
+
+// ANIMATION VICTOIRE GLOBALE
+const VictoryCelebration = () => {
+    return (
+        <div className="fixed inset-0 z-[9999] pointer-events-none flex items-center justify-center overflow-hidden">
+             <div className="absolute inset-0 bg-black/40 backdrop-blur-[2px] animate-fade-in-up" />
+             {/* Simple CSS Confetti using shadows */}
+             <div className="absolute inset-0 animate-confetti-fall" style={{backgroundImage: 'radial-gradient(circle, #fbbf24 4px, transparent 4px)', backgroundSize: '60px 60px', opacity: 0.5}}></div>
+             <div className="relative z-10 flex flex-col items-center animate-bounce-in">
+                 <Trophy size={100} className="text-yellow-400 drop-shadow-[0_0_30px_rgba(251,191,36,0.6)]" />
+                 <h2 className="text-6xl font-black text-white uppercase italic tracking-tighter mt-6 drop-shadow-2xl">Expert <span className="text-yellow-400">Unlock</span></h2>
+             </div>
+             <style>{`
+                @keyframes confetti-fall {
+                    0% { background-position: 0 0; }
+                    100% { background-position: 100px 1000px; }
+                }
+                .animate-confetti-fall { animation: confetti-fall 10s linear infinite; }
+                @keyframes bounce-in {
+                    0% { transform: scale(0); opacity: 0; }
+                    60% { transform: scale(1.2); opacity: 1; }
+                    100% { transform: scale(1); }
+                }
+                .animate-bounce-in { animation: bounce-in 0.8s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards; }
+             `}</style>
+        </div>
+    )
+}
+
+// QUEST TRACKER
+const QuestTracker = memo(({ found, t }) => {
+  const total = 4;
+  const isComplete = found.length >= total;
+  const [isOpen, setIsOpen] = useState(false);
+  const [showVictory, setShowVictory] = useState(false);
+
+  const hasWord1 = found.includes('lumos');
+  const hasWord2 = found.includes('alohomora');
+  const hasWord3 = found.includes('wingardium');
+  const hasHighScore = found.includes('highscore');
+   
+  const wordCount = [hasWord1, hasWord2, hasWord3].filter(Boolean).length;
+
+  useEffect(() => {
+      if (isComplete) {
+          setShowVictory(true);
+          const timer = setTimeout(() => {
+              setShowVictory(false);
+              setIsOpen(false);
+          }, 6000);
+          return () => clearTimeout(timer);
+      }
+  }, [isComplete]);
+
+  return (
+    <>
+    {showVictory && <VictoryCelebration />}
+    <div className="fixed bottom-6 left-6 z-[100] hidden md:flex flex-col items-start gap-4">
+        {showVictory && (
+            <div className="absolute bottom-20 left-0 bg-gradient-to-r from-yellow-600 to-yellow-400 text-black px-6 py-4 rounded-2xl shadow-glow-yellow animate-fade-in-up flex items-center gap-4 font-black uppercase text-sm tracking-wider min-w-[280px]">
+                <Trophy size={24} className="animate-bounce" />
+                <div>
+                    <p className="leading-none mb-1">{t.congrats}</p>
+                    <p className="text-[10px] opacity-80 font-bold">{t.benefit}</p>
+                </div>
+            </div>
+        )}
+
+        <div 
+            className={`group flex flex-col bg-[#0a0a0a]/95 backdrop-blur-md border ${isComplete ? 'border-yellow-500/50 shadow-glow-yellow' : 'border-white/10 shadow-2xl'} rounded-2xl transition-all duration-300 cursor-pointer overflow-hidden relative w-auto min-w-[300px]`}
+            onClick={() => !isComplete && setIsOpen(!isOpen)}
+        >
+            <div className="p-4 flex items-center justify-between">
+                <div className="flex items-center gap-4">
+                      <div className={`w-10 h-10 rounded-xl flex items-center justify-center border transition-all ${isComplete ? 'bg-yellow-500 text-black border-yellow-500' : 'bg-white/5 border-white/10 text-slate-400'}`}>
+                          {isComplete ? <Trophy size={20} /> : <ListTodo size={20} />}
+                      </div>
+                      <div>
+                          <p className={`text-xs font-black uppercase tracking-wider ${isComplete ? 'text-yellow-500' : 'text-white'}`}>{isComplete ? t.congrats : t.title}</p>
+                          <div className="flex items-center gap-2 mt-1">
+                              <div className="w-20 h-1.5 bg-white/10 rounded-full overflow-hidden">
+                                  <div className="h-full bg-red-600 transition-all duration-500" style={{ width: `${(found.length / total) * 100}%` }} />
+                              </div>
+                              <p className="text-[10px] font-bold text-slate-500">{found.length}/{total}</p>
+                          </div>
+                      </div>
+                </div>
+                {!isComplete && <ChevronDown size={16} className={`text-slate-500 transition-transform ${isOpen ? 'rotate-180' : ''}`} />}
+            </div>
+
+            {isOpen && !isComplete && (
+                <div className="px-4 pb-4 animate-reveal border-t border-white/5 pt-4">
+                      <p className="text-[10px] text-slate-400 font-medium italic mb-4 leading-relaxed bg-white/5 p-3 rounded-lg border border-white/5">
+                          <Info size={12} className="inline mr-2 text-red-500 relative -top-[1px]" />
+                          {t.instruction}
+                      </p>
+                      <div className="space-y-3">
+                          <div className={`flex items-center justify-between p-2 rounded-lg border ${wordCount === 3 ? 'bg-emerald-500/10 border-emerald-500/30' : 'bg-transparent border-transparent'}`}>
+                              <div className="flex items-center gap-3">
+                                  <MousePointer2 size={14} className={wordCount === 3 ? 'text-emerald-500' : 'text-slate-500'} />
+                                  <span className={`text-[10px] font-bold uppercase tracking-wide ${wordCount === 3 ? 'text-white' : 'text-slate-500'}`}>{t.task_words}</span>
+                              </div>
+                              <span className="text-[10px] font-mono font-bold text-slate-600">{wordCount}/3</span>
+                          </div>
+                          <div className={`flex items-center justify-between p-2 rounded-lg border ${hasHighScore ? 'bg-emerald-500/10 border-emerald-500/30' : 'bg-transparent border-transparent'}`}>
+                              <div className="flex items-center gap-3">
+                                  <Crosshair size={14} className={hasHighScore ? 'text-emerald-500' : 'text-slate-500'} />
+                                  <span className={`text-[10px] font-bold uppercase tracking-wide ${hasHighScore ? 'text-white' : 'text-slate-500'}`}>{t.task_score}</span>
+                              </div>
+                              {hasHighScore ? <Check size={12} className="text-emerald-500" /> : <div className="w-3 h-3 rounded-full border border-slate-700" />}
+                          </div>
+                      </div>
+                </div>
+            )}
+        </div>
+    </div>
+    </>
+  );
+});
+
+const Navbar = memo(({ scrolled, view, navigateTo, openChat, lang, setLang, t, isMuted, toggleMute }) => {
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+
+  return (
+    <nav className={`fixed top-0 w-full z-[100] transition-all duration-700 font-black ${(scrolled || view === 'play') ? 'bg-black/95 backdrop-blur-md border-b border-white/10 py-4 shadow-2xl' : 'bg-transparent py-6 md:py-10'}`}>
+      <div className="max-w-7xl mx-auto px-6 md:px-10 flex justify-between items-center relative">
+        <div onClick={() => { navigateTo('home'); window.scrollTo({ top: 0, behavior: 'instant' }); }} className="group cursor-pointer flex items-center gap-4 md:gap-6 active:scale-90 transition-all duration-500 z-50">
+          <div className="relative">
+            <div className="absolute inset-0 bg-red-600 blur-xl opacity-0 group-hover:opacity-40 transition-opacity" />
+            <div className="w-12 h-12 md:w-16 md:h-16 bg-gradient-to-tr from-red-600 via-red-500 to-orange-500 rounded-2xl md:rounded-3xl flex items-center justify-center text-white shadow-xl group-hover:rotate-12 transition-transform duration-500 text-xl md:text-2xl font-black relative z-10">LL</div>
+            <div className="absolute -top-1 -right-1 w-4 h-4 md:w-5 md:h-5 bg-emerald-500 border-[3px] border-black rounded-full shadow-glow-emerald z-20"></div>
+          </div>
+          <div className="flex flex-col leading-tight font-black pt-1">
+            <span className="text-white font-black text-xl md:text-2xl uppercase tracking-tighter group-hover:text-red-500 transition-colors duration-500 text-left">Lucien Lukes</span>
+            <span className="text-[9px] md:text-[10px] text-slate-500 font-black tracking-[0.4em] md:tracking-[0.6em] uppercase italic group-hover:text-white transition-colors duration-700">Growth Architect</span>
+          </div>
+        </div>
+
+        <button className="md:hidden text-white z-50 p-2" onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}>
+          {isMobileMenuOpen ? <X size={28} /> : <Menu size={28} />}
+        </button>
+
+        {isMobileMenuOpen && (
+          <div className="fixed inset-0 bg-black z-[200] flex flex-col items-center justify-center space-y-12 animate-reveal">
+              <button onClick={() => setIsMobileMenuOpen(false)} className="absolute top-8 right-8 text-white/50 hover:text-white p-4"><X size={32} /></button>
+              
+              <div className="flex flex-col items-center gap-10">
+                <button onClick={() => { navigateTo('home'); setIsMobileMenuOpen(false); }} className={`text-4xl font-black uppercase tracking-[0.2em] ${view === 'home' ? 'text-red-500' : 'text-white'}`}>{t.expertise}</button>
+                <button onClick={() => { navigateTo('bio'); setIsMobileMenuOpen(false); }} className={`text-4xl font-black uppercase tracking-[0.2em] ${view === 'bio' ? 'text-red-500' : 'text-white'}`}>{t.bio}</button>
+                <button onClick={() => { navigateTo('play'); setIsMobileMenuOpen(false); }} className={`text-4xl font-black uppercase tracking-[0.2em] ${view === 'play' ? 'text-red-500' : 'text-white'}`}>{t.lab}</button>
+              </div>
+
+              <div className="flex flex-col items-center gap-8 mt-8 border-t border-white/10 pt-12 w-2/3">
+                <button onClick={() => { openChat(); setIsMobileMenuOpen(false); }} className="w-full bg-white text-black px-10 py-6 rounded-[2rem] font-black uppercase tracking-[0.2em] shadow-2xl">{t.collab}</button>
+                <div className="flex items-center gap-6">
+                    <button onClick={() => setLang(l => l === 'fr' ? 'en' : 'fr')} className="text-slate-500 hover:text-white transition-colors text-xl font-black uppercase tracking-widest border-2 border-white/10 px-8 py-3 rounded-2xl">{lang === 'fr' ? 'FR' : 'EN'}</button>
+                    <button onClick={toggleMute} className="text-slate-500 hover:text-white transition-colors p-3 border-2 border-white/10 rounded-2xl">
+                        {isMuted ? <VolumeX size={24} /> : <Volume2 size={24} />}
+                    </button>
+                </div>
+              </div>
+          </div>
+        )}
+
+        <div className="hidden md:flex items-center gap-16 text-[12px] font-black uppercase tracking-[0.4em]">
+          <button onClick={() => navigateTo('home')} className={`transition-all duration-500 hover:text-white relative group ${view === 'home' ? 'text-white' : 'text-slate-500'}`}>{t.expertise}</button>
+          <button onClick={() => navigateTo('bio')} className={`transition-all duration-500 hover:text-white relative group ${view === 'bio' ? 'text-white' : 'text-slate-500'}`}>{t.bio}</button>
+          <button onClick={() => navigateTo('play')} className={`flex items-center gap-3 transition-all duration-500 hover:text-red-500 group ${view === 'play' ? 'text-red-500' : 'text-slate-500'}`}><Gamepad2 size={18} /> {t.lab}</button>
+          <button onClick={openChat} className="bg-white text-black px-12 py-5 rounded-[2rem] font-black hover:bg-red-600 hover:text-white transition-all shadow-2xl active:scale-95 tracking-[0.2em] font-black uppercase border-2 border-transparent">{t.collab}</button>
+          
+          <div className="flex items-center gap-4 ml-[-20px]">
+              <button onClick={() => setLang(l => l === 'fr' ? 'en' : 'fr')} className="text-slate-500 hover:text-white transition-colors text-[10px] font-black uppercase tracking-widest border border-white/10 px-2 py-1 rounded-lg ml-[-20px]">{lang === 'fr' ? 'FR' : 'EN'}</button>
+              <button onClick={toggleMute} className="text-slate-500 hover:text-white transition-colors">
+                 {isMuted ? <VolumeX size={16} /> : <Volume2 size={16} />}
+              </button>
+          </div>
+        </div>
+      </div>
+    </nav>
+  );
+});
+
+const SkillRadar = memo(({t}) => {
+    return (
+        <div className="relative w-full aspect-square max-w-[280px] mx-auto group">
+            <svg viewBox="-30 -30 260 260" className="w-full h-full drop-shadow-2xl">
+                <polygon points="100,20 180,100 100,180 20,100" fill="none" stroke="#333" strokeWidth="1" />
+                <polygon points="100,40 160,100 100,160 40,100" fill="none" stroke="#222" strokeWidth="1" />
+                <polygon points="100,60 140,100 100,140 60,100" fill="none" stroke="#222" strokeWidth="1" />
+                
+                <text x="100" y="10" textAnchor="middle" fill="#dc2626" fontSize="10" fontWeight="900" letterSpacing="1">STRATEGY</text>
+                <text x="200" y="103" textAnchor="middle" fill="#fff" fontSize="10" fontWeight="900" letterSpacing="1">TECH</text>
+                <text x="100" y="200" textAnchor="middle" fill="#fff" fontSize="10" fontWeight="900" letterSpacing="1">DATA</text>
+                <text x="0" y="103" textAnchor="middle" fill="#fff" fontSize="10" fontWeight="900" letterSpacing="1">CREATIVE</text>
+
+                <polygon points="100,25 170,100 100,170 35,100" fill="rgba(220, 38, 38, 0.2)" stroke="#dc2626" strokeWidth="2" className="animate-pulse" />
+                
+                <circle cx="100" cy="25" r="3" fill="#fff" />
+                <circle cx="170" cy="100" r="3" fill="#fff" />
+                <circle cx="100" cy="170" r="3" fill="#fff" />
+                <circle cx="35" cy="100" r="3" fill="#fff" />
+            </svg>
+            <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                <div className="bg-black/80 backdrop-blur px-3 py-1 rounded-full border border-white/10">
+                    <span className="text-[8px] font-black uppercase tracking-widest text-slate-300">{t.radar_title}</span>
+                </div>
+            </div>
+        </div>
+    )
+});
+
+const TechStackTicker = memo(({t}) => {
+    const stack = ["Meta Ads", "Google Ads", "GA4", "SEO Technical", "TikTok Ads", "HubSpot", "Zapier", "Copywriting", "Viral Loops", "Looker Studio", "Notion", "LinkedIn Growth"];
+    return (
+        <div className="w-full overflow-hidden border-y border-white/5 bg-white/[0.02] py-4 relative">
+            <div className="absolute left-0 top-0 bottom-0 w-12 bg-gradient-to-r from-[#0a0a0a] to-transparent z-10" />
+            <div className="absolute right-0 top-0 bottom-0 w-12 bg-gradient-to-l from-[#0a0a0a] to-transparent z-10" />
+            <div className="flex whitespace-nowrap animate-scroll-normal" style={{ willChange: 'transform' }}>
+                {[...stack, ...stack, ...stack].map((item, i) => (
+                    <span key={i} className="mx-6 text-slate-500 font-black uppercase text-[10px] tracking-widest flex items-center gap-2">
+                        <div className="w-1 h-1 bg-red-600 rounded-full" /> {item}
+                    </span>
+                ))}
+            </div>
+        </div>
+    );
+});
+
 const ScrollProgress = memo(() => {
   const barRef = useRef(null);
 
@@ -332,13 +623,13 @@ const ScrollProgress = memo(() => {
     const updateScroll = () => {
         if (!barRef.current) return;
         const totalHeight = document.documentElement.scrollHeight - window.innerHeight;
-        const progress = (window.scrollY / totalHeight) * 100;
-        barRef.current.style.height = `${progress}%`;
+        const progress = (window.scrollY / totalHeight);
+        barRef.current.style.transform = `scaleY(${progress})`;
     };
 
     const handleScroll = () => {
-       cancelAnimationFrame(rafId);
-       rafId = requestAnimationFrame(updateScroll);
+        cancelAnimationFrame(rafId);
+        rafId = requestAnimationFrame(updateScroll);
     };
 
     window.addEventListener('scroll', handleScroll, { passive: true });
@@ -352,8 +643,8 @@ const ScrollProgress = memo(() => {
     <div className="fixed top-0 right-0 h-full w-1.5 bg-white/5 z-[90] hidden md:block">
       <div 
         ref={barRef}
-        className="bg-red-600 w-full will-change-transform"
-        style={{ height: '0%' }}
+        className="bg-red-600 w-full h-full origin-top will-change-transform"
+        style={{ transform: 'scaleY(0)' }}
       />
     </div>
   );
@@ -361,7 +652,7 @@ const ScrollProgress = memo(() => {
 
 const TrustStrip = memo(({ lang, t }) => (
   <>
-    <div className="py-6 md:py-10 border-y border-white/5 bg-white/[0.02] overflow-hidden backdrop-blur-sm relative z-30">
+    <div className="py-6 md:py-10 border-y border-white/5 bg-white/[0.02] overflow-hidden backdrop-blur-sm relative z-30" style={{ transform: 'translate3d(0,0,0)' }}>
         <div className="max-w-7xl mx-auto px-6 flex flex-wrap justify-center lg:justify-between gap-4 md:gap-8 items-center text-slate-500 font-bold uppercase text-[9px] md:text-[10px] tracking-[0.2em]">
         <div className="flex items-center gap-2 md:gap-3"><ShieldCheck size={16} className="text-emerald-500" /> {t.sat}</div>
         <div className="flex items-center gap-2 md:gap-3"><Activity size={16} className="text-red-500" /> {t.proj}</div>
@@ -369,8 +660,6 @@ const TrustStrip = memo(({ lang, t }) => (
         <div className="flex items-center gap-2 md:gap-3"><Lock size={16} className="text-yellow-500" /> {t.conf}</div>
         </div>
     </div>
-    
-    {/* ANIMATED SCROLL ARROW MOVED OUTSIDE FOR VISIBILITY */}
     <div className="flex justify-center py-8 animate-bounce w-full relative z-20">
         <ChevronDown className="text-white/40 w-8 h-8 md:w-10 md:h-10" />
     </div>
@@ -405,7 +694,7 @@ const TestimonialsSection = memo(({ testimonials, t }) => (
   </section>
 ));
 
-const CollaborationForm = memo(({ onClose, playSound, t, stackData }) => {
+const CollaborationForm = memo(({ onClose, playSound, t, stackData, questCompleted }) => {
   const [step, setStep] = useState(1);
   const [formData, setFormData] = useState({
     type: 'freelance',
@@ -445,7 +734,20 @@ const CollaborationForm = memo(({ onClose, playSound, t, stackData }) => {
           {step === 1 && (
             <div className="space-y-8 md:space-y-12 animate-reveal">
               <div className="space-y-4">
-                <p className="text-red-500 font-black uppercase text-[10px] tracking-[0.2em]">{t.step1}</p>
+                <div className="flex items-center justify-between">
+                    <p className="text-red-500 font-black uppercase text-[10px] tracking-[0.2em]">{t.step1}</p>
+                    {questCompleted && (
+                        <div className="flex items-center gap-3 animate-fade-in-up">
+                            <div className="bg-gradient-to-r from-yellow-600 to-yellow-400 text-black px-3 py-1.5 rounded-lg flex items-center gap-2 shadow-glow-yellow">
+                                <Award size={12} className="fill-black" />
+                                <span className="text-[10px] font-black uppercase tracking-wider">{t.certified_badge}</span>
+                            </div>
+                            <div className="text-[10px] font-bold text-yellow-500 uppercase tracking-wide">
+                                {t.quest_bonus}
+                            </div>
+                        </div>
+                    )}
+                </div>
                 <div className="flex flex-col md:flex-row gap-4">
                   <button onClick={() => setFormData({...formData, type: 'freelance'})} className={`flex-1 p-6 rounded-3xl border-2 transition-all duration-300 flex flex-col items-center gap-3 ${formData.type === 'freelance' ? 'bg-white text-black border-white' : 'bg-white/5 border-white/5 text-slate-400 hover:bg-white/10'}`}>
                     <Zap size={24} className={formData.type === 'freelance' ? 'text-red-600' : ''} />
@@ -575,114 +877,79 @@ const Modal = memo(({ isOpen, onClose, children }) => {
   );
 });
 
-const Navbar = memo(({ scrolled, view, navigateTo, openChat, lang, setLang, t }) => {
-  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+const HeroSection = memo(({ openChat, playSound, profileImageUrl, t, handleDownload, triggerLongPress }) => {
+    const pressTimer = useRef(null);
 
-  return (
-    <nav className={`fixed top-0 w-full z-[100] transition-all duration-700 font-black ${(scrolled || view === 'play') ? 'bg-black/95 backdrop-blur-md border-b border-white/10 py-4 shadow-2xl' : 'bg-transparent py-6 md:py-10'}`}>
-      <div className="max-w-7xl mx-auto px-6 md:px-10 flex justify-between items-center relative">
-        <div onClick={() => { navigateTo('home'); window.scrollTo({ top: 0, behavior: 'instant' }); }} className="group cursor-pointer flex items-center gap-4 md:gap-6 active:scale-90 transition-all duration-500 z-50">
-          <div className="relative">
-            <div className="absolute inset-0 bg-red-600 blur-xl opacity-0 group-hover:opacity-40 transition-opacity" />
-            <div className="w-12 h-12 md:w-16 md:h-16 bg-gradient-to-tr from-red-600 via-red-500 to-orange-500 rounded-2xl md:rounded-3xl flex items-center justify-center text-white shadow-xl group-hover:rotate-12 transition-transform duration-500 text-xl md:text-2xl font-black relative z-10">LL</div>
-            <div className="absolute -top-1 -right-1 w-4 h-4 md:w-5 md:h-5 bg-emerald-500 border-[3px] border-black rounded-full shadow-glow-emerald z-20"></div>
+    const handleMouseDown = () => {
+        pressTimer.current = setTimeout(() => {
+            triggerLongPress();
+        }, 2000);
+    };
+
+    const handleMouseUp = () => {
+        if (pressTimer.current) clearTimeout(pressTimer.current);
+    };
+
+    return (
+      <section id="hero" className="relative pt-32 md:pt-72 pb-16 md:pb-32 px-6 overflow-hidden font-black">
+        <div className="absolute top-0 left-0 w-full h-full bg-gradient-to-b from-red-900/10 via-transparent to-[#020202] -z-10" style={{ transform: 'translate3d(0,0,0)' }} />
+        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full h-[800px] md:h-[1200px] bg-[radial-gradient(circle_at_50%_0%,rgba(220,38,38,0.15)_0%,transparent_70%)] -z-10" style={{ transform: 'translate3d(-50%,0,0)' }} />
+        <div className="absolute bottom-0 left-0 w-full h-40 bg-gradient-to-t from-[#020202] to-transparent -z-10" style={{ transform: 'translate3d(0,0,0)' }} />
+        <div className="digital-grid absolute inset-0 opacity-10 -z-20" style={{ transform: 'translate3d(0,0,0)' }} />
+        <div className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-20 items-center">
+          <div className="lg:col-span-8 space-y-8 md:space-y-12 animate-reveal">
+            <div className="inline-flex items-center gap-4 px-6 py-2 rounded-full bg-white/5 border border-white/10 text-[9px] md:text-[10px] font-black text-red-500 uppercase tracking-[0.6em] shadow-2xl animate-fade-in-up">
+              <Sparkles size={16} className="animate-pulse text-yellow-500" /> {t.badge}
+            </div>
+            <h1 
+                className="text-5xl sm:text-6xl md:text-8xl lg:text-[130px] font-black text-white tracking-tighter leading-[0.9] lg:leading-[0.8] uppercase italic animate-fade-in-up delay-100 select-none cursor-pointer active:scale-[0.98] transition-transform"
+                onMouseDown={handleMouseDown}
+                onMouseUp={handleMouseUp}
+                onTouchStart={handleMouseDown}
+                onTouchEnd={handleMouseUp}
+                onMouseLeave={handleMouseUp}
+            >
+              {t.title1} <br /> <span className="text-transparent bg-clip-text bg-gradient-to-r from-red-600 via-red-400 to-orange-500 drop-shadow-2xl">{t.title2}</span>
+            </h1>
+            <p className="text-lg md:text-3xl text-slate-400 max-w-2xl leading-relaxed font-light border-l-4 border-red-600 pl-6 md:pl-10 italic transition-all hover:text-white duration-500 animate-fade-in-up delay-200">
+              "{t.sub}"
+            </p>
+            <div className="flex flex-col md:flex-row flex-wrap gap-4 md:gap-8 pt-6 animate-fade-in-up delay-300">
+              <button onClick={openChat} className="w-full md:w-auto relative group bg-red-600 text-white px-8 py-4 md:px-12 md:py-6 rounded-2xl font-black uppercase tracking-[0.2em] md:tracking-[0.3em] text-xs md:text-sm shadow-glow-red transition-all hover:-translate-y-2 active:scale-95 overflow-hidden">
+                <div className="absolute inset-0 bg-white/10 translate-y-full group-hover:translate-y-0 transition-transform duration-500" />
+                <span className="relative z-10 flex items-center justify-center gap-3 font-black">{t.btn_work} <ArrowRight size={20} className="group-hover:translate-x-2 transition-transform" /></span>
+              </button>
+              <button onClick={handleDownload} className="w-full md:w-auto flex items-center justify-center gap-4 md:gap-6 bg-white/5 border border-white/10 px-8 py-4 md:px-10 md:py-6 rounded-2xl hover:bg-white/10 hover:-translate-y-2 transition-all group border-b-4 border-b-red-500/20 shadow-2xl font-black uppercase text-[10px] md:text-[11px] tracking-widest">{t.btn_cv} <Download size={20} className="text-red-500 ml-2" /></button>
+            </div>
           </div>
-          <div className="flex flex-col leading-tight font-black pt-1">
-            <span className="text-white font-black text-xl md:text-2xl uppercase tracking-tighter group-hover:text-red-500 transition-colors duration-500 text-left">Lucien Lukes</span>
-            <span className="text-[9px] md:text-[10px] text-slate-500 font-black tracking-[0.4em] md:tracking-[0.6em] uppercase italic group-hover:text-white transition-colors duration-700">Growth Architect</span>
+          <div className="lg:col-span-4 relative group animate-reveal delay-500 hidden lg:block pr-12">
+            <div className="relative aspect-[3.8/5] rounded-[5rem] overflow-hidden border-2 border-white/10 shadow-3xl">
+              <div className="absolute inset-0 bg-gradient-to-t from-black via-transparent to-transparent z-10 opacity-40" />
+              <img src={profileImageUrl} alt="Lucien Lukes Freelance Marketing Montpellier France" className="w-full h-full object-cover object-top brightness-110 contrast-105" />
+            </div>
+            
+            {/* BADGES */}
+            <div className="absolute top-16 -left-12 bg-black/80 backdrop-blur-md border border-white/5 p-3 pr-5 rounded-full flex items-center gap-3 shadow-xl z-20 animate-float">
+                  <div className="bg-red-600/20 p-2 rounded-full text-red-500"><Trophy size={16} /></div>
+                  <div>
+                      <p className="text-[9px] text-slate-400 font-bold uppercase tracking-wider">{t.exp}</p>
+                      <p className="text-white font-black text-sm leading-none">5+ Ans</p>
+                  </div>
+            </div>
+
+            <div className="absolute bottom-16 -right-8 bg-black/80 backdrop-blur-md border border-white/5 p-3 pr-5 rounded-full flex items-center gap-3 shadow-xl z-20 animate-float animation-delay-2000">
+                  <div className="bg-emerald-500/20 p-2 rounded-full text-emerald-500"><CheckCircle size={16} /></div>
+                  <div>
+                      <p className="text-[9px] text-slate-400 font-bold uppercase tracking-wider">{t.proj}</p>
+                      <p className="text-white font-black text-sm leading-none">{t.success}</p>
+                  </div>
+            </div>
+
           </div>
         </div>
-
-        {/* Mobile Menu Toggle */}
-        <button className="md:hidden text-white z-50 p-2" onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}>
-          {isMobileMenuOpen ? <X size={28} /> : <Menu size={28} />}
-        </button>
-
-        {/* Mobile Menu Overlay */}
-        {isMobileMenuOpen && (
-          <div className="fixed inset-0 bg-black z-[200] flex flex-col items-center justify-center space-y-12 animate-reveal">
-              <button onClick={() => setIsMobileMenuOpen(false)} className="absolute top-8 right-8 text-white/50 hover:text-white p-4"><X size={32} /></button>
-              
-              <div className="flex flex-col items-center gap-10">
-                <button onClick={() => { navigateTo('home'); setIsMobileMenuOpen(false); }} className={`text-4xl font-black uppercase tracking-[0.2em] ${view === 'home' ? 'text-red-500' : 'text-white'}`}>{t.expertise}</button>
-                <button onClick={() => { navigateTo('bio'); setIsMobileMenuOpen(false); }} className={`text-4xl font-black uppercase tracking-[0.2em] ${view === 'bio' ? 'text-red-500' : 'text-white'}`}>{t.bio}</button>
-                <button onClick={() => { navigateTo('play'); setIsMobileMenuOpen(false); }} className={`text-4xl font-black uppercase tracking-[0.2em] ${view === 'play' ? 'text-red-500' : 'text-white'}`}>{t.lab}</button>
-              </div>
-
-              <div className="flex flex-col items-center gap-8 mt-8 border-t border-white/10 pt-12 w-2/3">
-                <button onClick={() => { openChat(); setIsMobileMenuOpen(false); }} className="w-full bg-white text-black px-10 py-6 rounded-[2rem] font-black uppercase tracking-[0.2em] shadow-2xl">{t.collab}</button>
-                <button onClick={() => setLang(l => l === 'fr' ? 'en' : 'fr')} className="text-slate-500 hover:text-white transition-colors text-xl font-black uppercase tracking-widest border-2 border-white/10 px-8 py-3 rounded-2xl">{lang === 'fr' ? 'FR' : 'EN'}</button>
-              </div>
-          </div>
-        )}
-
-        {/* Desktop Menu */}
-        <div className="hidden md:flex items-center gap-16 text-[12px] font-black uppercase tracking-[0.4em]">
-          <button onClick={() => navigateTo('home')} className={`transition-all duration-500 hover:text-white relative group ${view === 'home' ? 'text-white' : 'text-slate-500'}`}>{t.expertise}</button>
-          <button onClick={() => navigateTo('bio')} className={`transition-all duration-500 hover:text-white relative group ${view === 'bio' ? 'text-white' : 'text-slate-500'}`}>{t.bio}</button>
-          <button onClick={() => navigateTo('play')} className={`flex items-center gap-3 transition-all duration-500 hover:text-red-500 group ${view === 'play' ? 'text-red-500' : 'text-slate-500'}`}><Gamepad2 size={18} /> {t.lab}</button>
-          <button onClick={openChat} className="bg-white text-black px-12 py-5 rounded-[2rem] font-black hover:bg-red-600 hover:text-white transition-all shadow-2xl active:scale-95 tracking-[0.2em] font-black uppercase border-2 border-transparent">{t.collab}</button>
-          
-          {/* LANG SWITCHER */}
-          <button onClick={() => setLang(l => l === 'fr' ? 'en' : 'fr')} className="text-slate-500 hover:text-white transition-colors text-[10px] font-black uppercase tracking-widest border border-white/10 px-2 py-1 rounded-lg ml-[-20px]">{lang === 'fr' ? 'FR' : 'EN'}</button>
-        </div>
-      </div>
-    </nav>
-  );
+      </section>
+    );
 });
-
-const HeroSection = memo(({ openChat, playSound, profileImageUrl, t, handleDownload }) => (
-  <section id="hero" className="relative pt-32 md:pt-72 pb-16 md:pb-32 px-6 overflow-hidden font-black">
-    <div className="absolute top-0 left-0 w-full h-full bg-gradient-to-b from-red-900/10 via-transparent to-[#020202] -z-10" />
-    <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full h-[800px] md:h-[1200px] bg-[radial-gradient(circle_at_50%_0%,rgba(220,38,38,0.15)_0%,transparent_70%)] -z-10" />
-    <div className="absolute bottom-0 left-0 w-full h-40 bg-gradient-to-t from-[#020202] to-transparent -z-10" />
-    <div className="digital-grid absolute inset-0 opacity-10 -z-20" />
-    <div className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-20 items-center">
-      <div className="lg:col-span-8 space-y-8 md:space-y-12 animate-reveal">
-        <div className="inline-flex items-center gap-4 px-6 py-2 rounded-full bg-white/5 border border-white/10 text-[9px] md:text-[10px] font-black text-red-500 uppercase tracking-[0.6em] shadow-2xl animate-fade-in-up">
-          <Sparkles size={16} className="animate-pulse text-yellow-500" /> {t.badge}
-        </div>
-        <h1 className="text-5xl sm:text-6xl md:text-8xl lg:text-[130px] font-black text-white tracking-tighter leading-[0.9] lg:leading-[0.8] uppercase italic animate-fade-in-up delay-100">
-          {t.title1} <br /> <span className="text-transparent bg-clip-text bg-gradient-to-r from-red-600 via-red-400 to-orange-500 drop-shadow-2xl">{t.title2}</span>
-        </h1>
-        <p className="text-lg md:text-3xl text-slate-400 max-w-2xl leading-relaxed font-light border-l-4 border-red-600 pl-6 md:pl-10 italic transition-all hover:text-white duration-500 animate-fade-in-up delay-200">
-          "{t.sub}"
-        </p>
-        <div className="flex flex-col md:flex-row flex-wrap gap-4 md:gap-8 pt-6 animate-fade-in-up delay-300">
-          <button onClick={openChat} className="w-full md:w-auto relative group bg-red-600 text-white px-8 py-4 md:px-12 md:py-6 rounded-2xl font-black uppercase tracking-[0.2em] md:tracking-[0.3em] text-xs md:text-sm shadow-glow-red transition-all hover:-translate-y-2 active:scale-95 overflow-hidden">
-            <div className="absolute inset-0 bg-white/10 translate-y-full group-hover:translate-y-0 transition-transform duration-500" />
-            <span className="relative z-10 flex items-center justify-center gap-3 font-black">{t.btn_work} <ArrowRight size={20} className="group-hover:translate-x-2 transition-transform" /></span>
-          </button>
-          <button onClick={handleDownload} className="w-full md:w-auto flex items-center justify-center gap-4 md:gap-6 bg-white/5 border border-white/10 px-8 py-4 md:px-10 md:py-6 rounded-2xl hover:bg-white/10 hover:-translate-y-2 transition-all group border-b-4 border-b-red-500/20 shadow-2xl font-black uppercase text-[10px] md:text-[11px] tracking-widest">{t.btn_cv} <Download size={20} className="text-red-500 ml-2" /></button>
-        </div>
-      </div>
-      <div className="lg:col-span-4 relative group animate-reveal delay-500 hidden lg:block pr-12">
-        <div className="relative aspect-[3.8/5] rounded-[5rem] overflow-hidden border-2 border-white/10 shadow-3xl">
-          <div className="absolute inset-0 bg-gradient-to-t from-black via-transparent to-transparent z-10 opacity-40" />
-          <img src={profileImageUrl} alt="Lucien Lukes Freelance Marketing Montpellier France" className="w-full h-full object-cover object-top brightness-110 contrast-105" />
-        </div>
-        
-        {/* BADGES */}
-        <div className="absolute top-16 -left-12 bg-black/80 backdrop-blur-md border border-white/5 p-3 pr-5 rounded-full flex items-center gap-3 shadow-xl z-20 animate-float">
-             <div className="bg-red-600/20 p-2 rounded-full text-red-500"><Trophy size={16} /></div>
-             <div>
-                 <p className="text-[9px] text-slate-400 font-bold uppercase tracking-wider">{t.exp}</p>
-                 <p className="text-white font-black text-sm leading-none">5+ Ans</p>
-             </div>
-        </div>
-
-        <div className="absolute bottom-16 -right-8 bg-black/80 backdrop-blur-md border border-white/5 p-3 pr-5 rounded-full flex items-center gap-3 shadow-xl z-20 animate-float animation-delay-2000">
-             <div className="bg-emerald-500/20 p-2 rounded-full text-emerald-500"><CheckCircle size={16} /></div>
-             <div>
-                 <p className="text-[9px] text-slate-400 font-bold uppercase tracking-wider">{t.proj}</p>
-                 <p className="text-white font-black text-sm leading-none">{t.success}</p>
-             </div>
-        </div>
-
-      </div>
-    </div>
-  </section>
-));
 
 const Experiences = memo(({ experiences, onSpell, t }) => {
   const containerRef = useRef(null);
@@ -690,32 +957,53 @@ const Experiences = memo(({ experiences, onSpell, t }) => {
 
   useEffect(() => {
     let rafId;
-    let ticking = false;
-
-    const handleScroll = () => {
-        if (!ticking) {
-            rafId = requestAnimationFrame(() => {
-                if (containerRef.current && progressRef.current) {
-                    const rect = containerRef.current.getBoundingClientRect();
-                    const windowHeight = window.innerHeight;
-                    const progress = Math.min(Math.max(- (rect.top - windowHeight) / rect.height, 0), 1);
-                    progressRef.current.style.transform = `scaleY(${progress})`;
-                }
-                ticking = false;
-            });
-            ticking = true;
+    let containerRect = { top: 0, height: 0 };
+    
+    const updateMetrics = () => {
+        if(containerRef.current) {
+            const r = containerRef.current.getBoundingClientRect();
+            const scrollTop = window.scrollY || document.documentElement.scrollTop;
+            containerRect = { 
+                top: r.top + scrollTop, 
+                height: r.height 
+            };
         }
     };
+
+    window.addEventListener('resize', updateMetrics);
+    updateMetrics(); 
+
+    const updateScroll = () => {
+        if (!progressRef.current || containerRect.height === 0) return;
+        
+        const scrollY = window.scrollY;
+        const windowHeight = window.innerHeight;
+        
+        const startOffset = windowHeight / 2;
+        const triggerPoint = containerRect.top - startOffset;
+        
+        let progress = (scrollY - triggerPoint) / containerRect.height;
+        progress = Math.max(0, Math.min(progress, 1));
+        
+        progressRef.current.style.transform = `scaleY(${progress})`;
+    };
+
+    const handleScroll = () => {
+        cancelAnimationFrame(rafId);
+        rafId = requestAnimationFrame(updateScroll);
+    };
+
     window.addEventListener('scroll', handleScroll, { passive: true });
     return () => {
         window.removeEventListener('scroll', handleScroll);
+        window.removeEventListener('resize', updateMetrics);
         cancelAnimationFrame(rafId);
     }
   }, []);
 
   return (
     <section id="missions" ref={containerRef} className="py-16 md:py-56 px-6 relative font-black">
-      <div className="absolute top-0 left-0 w-full h-full bg-gradient-to-b from-transparent via-red-600/5 to-transparent -z-10" />
+      <div className="absolute top-0 left-0 w-full h-full bg-gradient-to-b from-transparent via-red-600/5 to-transparent -z-10" style={{ transform: 'translate3d(0,0,0)' }} />
       <div className="max-w-6xl mx-auto space-y-12 md:space-y-32">
         <div className="text-center space-y-6">
             <p className="text-red-500 font-black uppercase text-[11px] tracking-[1em] animate-pulse">{t.roadmap}</p>
@@ -723,13 +1011,13 @@ const Experiences = memo(({ experiences, onSpell, t }) => {
         </div>
         <div className="relative space-y-12 md:space-y-32 text-left">
           <div className="absolute left-[31px] md:left-1/2 top-0 bottom-0 w-[4px] bg-white/5 hidden md:block overflow-hidden rounded-full shadow-inner font-black">
-              <div ref={progressRef} className="absolute top-0 left-0 w-full bg-gradient-to-b from-red-600 via-orange-500 to-red-400 origin-top transition-transform duration-150 ease-out will-change-transform font-black" style={{ height: '100%', transform: 'scaleY(0)' }} />
+              <div ref={progressRef} className="absolute top-0 left-0 w-full h-full bg-gradient-to-b from-red-600 via-orange-500 to-red-400 origin-top will-change-transform font-black" style={{ transform: 'scaleY(0)' }} />
           </div>
 
           {experiences.map((exp, i) => (
             <div key={i} className={`relative flex flex-col md:flex-row items-center gap-8 md:gap-20 group ${i % 2 === 0 ? 'md:flex-row' : 'md:flex-row-reverse'} animate-reveal font-black`}>
               <div className="absolute left-[20px] md:left-1/2 md:-translate-x-1/2 w-10 h-10 rounded-full bg-black border-4 border-red-600 z-20 group-hover:scale-150 transition-all duration-500 hidden md:block shadow-glow-red font-black" />
-              <div className={`w-full md:w-[45%] p-6 md:p-16 rounded-[2rem] md:rounded-[5rem] transition-all duration-1000 relative overflow-hidden font-black ${exp.isPoudlard ? 'bg-[#0a0a0a] border-amber-500/40 shadow-2xl ring-1 ring-amber-500/20' : 'bg-slate-900/60 border-white/5 backdrop-blur-3xl hover:bg-slate-900 group-hover:border-red-500/40 shadow-3xl'}`}>
+              <div className={`w-full md:w-[45%] p-6 md:p-16 rounded-[2rem] md:rounded-[5rem] transition-all duration-1000 relative overflow-hidden font-black ${exp.isPoudlard ? 'bg-[#0a0a0a] border-amber-500/40 shadow-2xl ring-1 ring-amber-500/20' : 'bg-slate-900/60 border-white/5 backdrop-blur-md hover:bg-slate-900 group-hover:border-red-500/40 shadow-3xl'}`}>
                 {exp.isPoudlard && <div className="absolute top-0 right-0 bg-amber-500 px-6 py-3 md:px-10 md:py-4 rounded-bl-[2rem] md:rounded-bl-[2.5rem] font-black text-[9px] md:text-[11px] text-black tracking-widest uppercase flex items-center gap-2 md:gap-3 shadow-2xl font-black"><span className="animate-spin-slow"><Sparkle size={14} fill="black" /></span> Projet Pilier</div>}
                 <div className="space-y-6 md:space-y-12 font-black">
                   <div className="space-y-4 font-black">
@@ -800,8 +1088,8 @@ const CursusSectionComp = memo(({ t }) => (
   </div>
 ));
 
-const SectionBio = memo(({ profileImageUrl, navigateTo, copyDiscord, copyFeedback, playSound, onSpell, t, handleDownload }) => (
-  <div className="pt-24 md:pt-40 pb-16 md:pb-24 px-6 animate-reveal font-black">
+const SectionBio = memo(({ profileImageUrl, navigateTo, copyDiscord, copyFeedback, playSound, onSpell, t, handleDownload, sayHello }) => (
+  <div className="pt-24 md:pt-40 pb-16 md:pb-24 px-6 animate-reveal font-black" style={{willChange: 'transform', backfaceVisibility: 'hidden'}}>
     <div className="max-w-7xl mx-auto">
       <div className="mb-12 md:mb-20 space-y-6">
         <p className="text-red-500 font-black uppercase text-[11px] tracking-[1em] animate-fade-in-up">{t.sub}</p>
@@ -813,7 +1101,7 @@ const SectionBio = memo(({ profileImageUrl, navigateTo, copyDiscord, copyFeedbac
           <div className="relative rounded-[2.5rem] md:rounded-[3rem] overflow-hidden border border-white/10 aspect-[3/4] group shadow-2xl">
             <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent -translate-x-full group-hover:animate-shimmer-fast z-30" />
             <div className="absolute inset-0 bg-gradient-to-t from-red-900/40 via-transparent to-transparent z-10 opacity-60"></div>
-            <img src={profileImageUrl} alt="Consultant influence marketing & Freelance marketing France" className="w-full h-full object-cover object-top transition-transform duration-700 group-hover:scale-105" />
+            <img src={profileImageUrl} alt="Consultant influence marketing & Freelance marketing France" className="w-full h-full object-cover object-top transition-transform duration-700 group-hover:scale-105" loading="eager" />
             
             <div className="absolute bottom-6 md:bottom-8 left-6 md:left-8 right-6 md:right-8 z-20 space-y-2">
               <div className="flex items-center gap-2 text-white font-black uppercase text-xs tracking-wider mb-2">
@@ -837,6 +1125,11 @@ const SectionBio = memo(({ profileImageUrl, navigateTo, copyDiscord, copyFeedbac
           <button onClick={handleDownload} className="w-full bg-red-600 hover:bg-white hover:text-black text-white p-5 md:p-6 rounded-3xl flex items-center justify-center gap-4 transition-all font-black uppercase text-xs tracking-widest shadow-glow-red">
             <Download size={18} /> {t.dl}
           </button>
+          
+          {/* Skill Radar Feature */}
+          <div className="bg-[#0a0a0a] border border-white/10 p-6 rounded-[2rem] shadow-xl">
+             <SkillRadar t={t} />
+          </div>
         </div>
 
         <div className="lg:col-span-8 space-y-8">
@@ -848,7 +1141,7 @@ const SectionBio = memo(({ profileImageUrl, navigateTo, copyDiscord, copyFeedbac
                 {t.intro_1} <span className="text-transparent bg-clip-text bg-gradient-to-r from-red-500 to-white">
                   <span onClick={() => onSpell('alohomora')} className="cursor-pointer hover:text-red-400 transition-colors">{t.intro_2}</span>
                 </span>
-                <span className="animate-wave inline-block origin-[70%_70%]">👋</span>
+                <span onClick={sayHello} className="animate-wave inline-block origin-[70%_70%] cursor-pointer hover:scale-125 transition-transform duration-200">👋</span>
               </h3>
               <div className="flex items-center gap-4">
                  <div className="h-[2px] w-12 bg-red-600"></div>
@@ -905,6 +1198,11 @@ const SectionBio = memo(({ profileImageUrl, navigateTo, copyDiscord, copyFeedbac
                   <p className="text-white font-bold text-base md:text-lg leading-none">Scale-up / Tech</p>
                 </div>
              </div>
+          </div>
+          
+          {/* Tech Stack Ticker Feature - Accelerated */}
+          <div className="overflow-hidden rounded-[2rem]">
+             <TechStackTicker t={t} />
           </div>
         </div>
       </div>
@@ -968,18 +1266,36 @@ const GrowthLabGameComp = memo(({ navigateTo, playSound, profileImageUrl, openCh
   }, [gameActive]);
 
   useEffect(() => {
-    let timerInterval;
+    let timer;
     if (gameActive) {
-      timerInterval = setInterval(() => {
+      const startTime = Date.now();
+      const initialTime = 15;
+      
+      timer = setInterval(() => {
         setTimeLeft((prev) => {
-          if (prev <= 6 && prev > 1) { setPanicMode(true); playSound(prev * 140, 'square', 0.05); }
-          if (prev <= 1) { clearInterval(timerInterval); setGameActive(false); setPanicMode(false); playSound(60, 'sawtooth', 0.8); return 0; }
-          return prev - 1;
+           if (prev <= 0) return 0;
+           return prev - 1;
         });
       }, 1000);
     }
-    return () => clearInterval(timerInterval);
-  }, [gameActive, playSound]);
+    return () => clearInterval(timer);
+  }, [gameActive]);
+
+  useEffect(() => {
+      if (gameActive && timeLeft <= 6 && timeLeft > 0 && !panicMode) {
+          setPanicMode(true);
+          playSound(200, 'square', 0.1);
+      }
+  }, [timeLeft, gameActive, panicMode, playSound]);
+
+  useEffect(() => {
+      if (timeLeft === 0 && gameActive) {
+          setGameActive(false);
+          setPanicMode(false);
+          playSound(60, 'sawtooth', 0.8);
+          if (score > 150000) onSpell('highscore');
+      }
+  }, [timeLeft, gameActive, score, onSpell, playSound]);
 
   useEffect(() => {
     let spawnInterval;
@@ -995,15 +1311,16 @@ const GrowthLabGameComp = memo(({ navigateTo, playSound, profileImageUrl, openCh
             else if (rand < 0.45) type = 'bad_buzz';
             else if (rand < 0.47) type = 'clock'; 
             
-            // Slower speed on mobile to make it playable
             const isMobile = window.innerWidth < 768;
-            const speedFactor = isMobile ? (panicMode ? 2 : 1) : (panicMode ? 3.5 : 2);
+            const baseSpeed = isMobile ? 1.5 : 2.5; 
+            const panicSpeed = isMobile ? 2.5 : 4.5;
+            const speedFactor = panicMode ? panicSpeed : baseSpeed;
 
             const newTarget = { id, x: Math.random() * 80 + 10, y: Math.random() * 70 + 15, type, vx: (Math.random() - 0.5) * speedFactor, vy: (Math.random() - 0.5) * speedFactor };
-            setTimeout(() => setTargets(curr => curr.filter(t => t.id !== id)), 2500);
+            setTimeout(() => setTargets(curr => curr.filter(t => t.id !== id)), 2000); 
             return [...prev, newTarget];
         });
-      }, panicMode ? 180 : 300);
+      }, panicMode ? 150 : 280); 
     }
     return () => clearInterval(spawnInterval);
   }, [gameActive, panicMode]);
@@ -1022,182 +1339,188 @@ const GrowthLabGameComp = memo(({ navigateTo, playSound, profileImageUrl, openCh
       case 'spam': points = -3000; msg = "BOTS DETECTED!"; color = "text-red-500"; playSound(100, 'sawtooth'); setCombo(0); break;
       case 'vip': points = 25000 * multiplier; msg = "PARTENARIAT 👑"; color = "text-purple-400"; playSound(1800, 'triangle'); break;
       case 'bad_buzz': timeBonus = -4; msg = "BAD BUZZ!"; color = "text-orange-600"; playSound(60, 'sawtooth'); setCombo(0); break;
-      case 'clock': timeBonus = 2; msg = "CONTENT STREAK! +2s"; color = "text-blue-400"; playSound(1200); break;
+      case 'clock': timeBonus = 1; msg = "CONTENT STREAK! +1s"; color = "text-blue-400"; playSound(1200); break;
     }
     const fId = Math.random();
     setClickFeedbacks(prev => [...prev, { id: fId, x, y, msg, color }]);
     setTimeout(() => setClickFeedbacks(prev => prev.filter(f => f.id !== fId)), 800);
     setScore(prev => prev + points);
-    if (timeBonus !== 0) setTimeLeft(prev => Math.max(0, prev + timeBonus));
+    
+    if (timeBonus !== 0) {
+        setTimeLeft(prev => Math.max(0, prev + timeBonus));
+    }
+    
     setTargets(prev => prev.filter(t => t.id !== id));
   }, [multiplier, combo, playSound]);
 
   return (
-    <div className="pt-24 md:pt-40 pb-24 md:pb-40 px-6 font-black animate-reveal min-h-screen relative flex flex-col items-center justify-start overflow-y-auto">
+    <div className="pt-24 md:pt-40 pb-24 md:pb-40 px-6 font-black animate-reveal min-h-screen relative flex flex-col items-center justify-start overflow-y-auto" style={{willChange: 'transform', backfaceVisibility: 'hidden'}}>
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,rgba(220,38,38,0.05)_0%,transparent_100%)] -z-10" />
         <div className="max-w-6xl w-full space-y-8 md:space-y-12 relative z-10 py-6 md:py-10 font-black">
             <div className="text-center space-y-4 md:space-y-6 mb-8 md:mb-12">
                 <h2 className="text-4xl md:text-6xl lg:text-[100px] font-black text-white tracking-tighter uppercase italic leading-[0.9] md:leading-[0.8] animate-float leading-none">{t.title} <br/><span className="text-red-600 cursor-pointer hover:text-white transition-colors" onClick={() => onSpell('wingardium')}>{t.title_sub}</span></h2>
             </div>
+
             <div className={`relative bg-[#050505] border-2 rounded-[3rem] md:rounded-[4rem] p-6 md:p-16 shadow-3xl transition-all duration-1000 border-white/10 w-full mx-auto ${gameActive ? 'border-red-600/40' : ''} ${panicMode ? 'animate-stress' : ''}`}>
-              <div className="relative z-10 flex flex-col lg:flex-row justify-between items-center mb-8 md:mb-12 gap-6 md:gap-8">
-                <div className="text-center lg:text-left space-y-4">
-                  <div className="flex gap-3 justify-center lg:justify-start items-center">
-                    <div className="bg-white/[0.03] border border-white/10 px-4 md:px-5 py-2 md:py-3 rounded-2xl inline-block backdrop-blur-md">
-                        <p className="text-[9px] md:text-[10px] font-black uppercase tracking-[0.4em] text-slate-400 flex items-center gap-3"><Star size={14} className="text-yellow-500" /> Combo: <span className="text-white">x{combo}</span></p>
+                <div className="relative z-10 flex flex-col lg:flex-row justify-between items-center mb-8 md:mb-12 gap-6 md:gap-8">
+                    <div className="text-center lg:text-left space-y-4">
+                    <div className="flex gap-3 justify-center lg:justify-start items-center">
+                        <div className="bg-white/[0.03] border border-white/10 px-4 md:px-5 py-2 md:py-3 rounded-2xl inline-block backdrop-blur-md">
+                            <p className="text-[9px] md:text-[10px] font-black uppercase tracking-[0.4em] text-slate-400 flex items-center gap-3"><Star size={14} className="text-yellow-500" /> Combo: <span className="text-white">x{combo}</span></p>
+                        </div>
+                        {multiplier > 1 && <div className="bg-yellow-500 text-black px-4 md:px-5 py-2 md:py-3 rounded-2xl animate-bounce shadow-glow-yellow font-black uppercase text-[9px] md:text-[10px] tracking-widest italic leading-none">HYPE x{multiplier}</div>}
                     </div>
-                    {multiplier > 1 && <div className="bg-yellow-500 text-black px-4 md:px-5 py-2 md:py-3 rounded-2xl animate-bounce shadow-glow-yellow font-black uppercase text-[9px] md:text-[10px] tracking-widest italic leading-none">HYPE x{multiplier}</div>}
-                  </div>
+                    </div>
+                    {gameActive && (
+                    <div className="flex gap-4 md:gap-6 animate-slide-in-right">
+                        <div className={`px-6 py-4 md:px-10 md:py-6 rounded-3xl border transition-all duration-500 ${timeLeft < 5 ? 'bg-red-600 text-white shadow-glow-red scale-110' : 'bg-white/5 border-white/10 text-white shadow-3xl'}`}>
+                        <p className="text-[9px] md:text-[10px] font-black uppercase tracking-[0.4em] opacity-60">{t.timer}</p>
+                        <p className="text-2xl md:text-4xl font-black tabular-nums leading-none mt-1 md:mt-2">{timeLeft}s</p>
+                        </div>
+                        <div className="px-6 py-4 md:px-10 md:py-6 rounded-3xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-500 shadow-3xl min-w-[160px] md:min-w-[240px]">
+                        <p className="text-[9px] md:text-[10px] font-black uppercase tracking-[0.4em] opacity-60 text-nowrap">{t.eng}</p>
+                        <p className="text-2xl md:text-4xl font-black tabular-nums leading-none mt-1 md:mt-2">{formatScore(score)}</p>
+                        </div>
+                    </div>
+                    )}
                 </div>
-                {gameActive && (
-                  <div className="flex gap-4 md:gap-6 animate-slide-in-right">
-                    <div className={`px-6 py-4 md:px-10 md:py-6 rounded-3xl border transition-all duration-500 ${timeLeft < 5 ? 'bg-red-600 text-white shadow-glow-red scale-110' : 'bg-white/5 border-white/10 text-white shadow-3xl'}`}>
-                      <p className="text-[9px] md:text-[10px] font-black uppercase tracking-[0.4em] opacity-60">{t.timer}</p>
-                      <p className="text-2xl md:text-4xl font-black tabular-nums leading-none mt-1 md:mt-2">{timeLeft}s</p>
-                    </div>
-                    <div className="px-6 py-4 md:px-10 md:py-6 rounded-3xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-500 shadow-3xl min-w-[160px] md:min-w-[240px]">
-                      <p className="text-[9px] md:text-[10px] font-black uppercase tracking-[0.4em] opacity-60 text-nowrap">{t.eng}</p>
-                      <p className="text-2xl md:text-4xl font-black tabular-nums leading-none mt-1 md:mt-2">{formatScore(score)}</p>
-                    </div>
-                  </div>
-                )}
-              </div>
-              <div className={`relative w-full max-w-5xl mx-auto aspect-none md:aspect-[16/8] h-[60vh] md:h-auto bg-[#020202] rounded-[2rem] md:rounded-[3rem] border border-white/10 overflow-hidden group cursor-crosshair transition-all duration-1000 ${gameActive ? 'ring-4 md:ring-8 ring-red-600/5' : ''}`}>
-                {visualEvent === 'crash' && <div className="absolute inset-0 bg-red-600/20 z-0 animate-pulse pointer-events-none" />}
-                {visualEvent === 'hype' && <div className="absolute inset-0 bg-yellow-500/20 z-0 animate-pulse pointer-events-none" />}
-                
-                {!gameActive ? (
-                  <div className="absolute inset-0 z-[100] flex items-center justify-center bg-black/95 backdrop-blur-[40px] p-6 text-center">
-                    {showBriefing ? (
-                        <div className="animate-reveal space-y-6 md:space-y-8 w-full max-w-3xl mx-auto flex flex-col items-center p-6 md:p-8 bg-[#0a0a0a] border border-white/10 rounded-[2rem] md:rounded-[3rem] shadow-2xl">
-                            <h3 className="text-white font-black text-2xl md:text-4xl uppercase italic tracking-tighter">{t.brief}</h3>
-                            <div className="grid grid-cols-2 md:grid-cols-3 gap-4 md:gap-6 w-full">
-                                <div className="flex flex-col items-center gap-2 p-3 md:p-4 bg-white/5 rounded-2xl border border-white/5">
-                                    <Users size={24} className="text-blue-400 md:w-8 md:h-8" />
-                                    <p className="text-white font-bold uppercase text-[10px] md:text-xs">{t.brief_client}</p>
-                                    <p className="text-slate-400 text-[9px] md:text-[10px]">+500 Pts</p>
+                <div className={`relative w-full max-w-5xl mx-auto aspect-none md:aspect-[16/8] h-[60vh] md:h-auto bg-[#020202] rounded-[2rem] md:rounded-[3rem] border border-white/10 overflow-hidden group cursor-crosshair transition-all duration-1000 ${gameActive ? 'ring-4 md:ring-8 ring-red-600/5' : ''}`}>
+                    {visualEvent === 'crash' && <div className="absolute inset-0 bg-red-600/20 z-0 animate-pulse pointer-events-none" />}
+                    {visualEvent === 'hype' && <div className="absolute inset-0 bg-yellow-500/20 z-0 animate-pulse pointer-events-none" />}
+                    
+                    {!gameActive ? (
+                    <div className="absolute inset-0 z-[100] flex items-center justify-center bg-black/95 backdrop-blur-[40px] p-6 text-center">
+                        {showBriefing ? (
+                            <div className="animate-reveal space-y-6 md:space-y-8 w-full max-w-3xl mx-auto flex flex-col items-center p-6 md:p-8 bg-[#0a0a0a] border border-white/10 rounded-[2rem] md:rounded-[3rem] shadow-2xl">
+                                <h3 className="text-white font-black text-2xl md:text-4xl uppercase italic tracking-tighter">{t.brief}</h3>
+                                <div className="grid grid-cols-2 md:grid-cols-3 gap-4 md:gap-6 w-full">
+                                    <div className="flex flex-col items-center gap-2 p-3 md:p-4 bg-white/5 rounded-2xl border border-white/5">
+                                        <Users size={24} className="text-blue-400 md:w-8 md:h-8" />
+                                        <p className="text-white font-bold uppercase text-[10px] md:text-xs">{t.brief_client}</p>
+                                        <p className="text-slate-400 text-[9px] md:text-[10px]">+500 Pts</p>
+                                    </div>
+                                    <div className="flex flex-col items-center gap-2 p-3 md:p-4 bg-white/5 rounded-2xl border border-white/5">
+                                        <Rocket size={24} className="text-yellow-400 md:w-8 md:h-8" />
+                                        <p className="text-white font-bold uppercase text-[10px] md:text-xs">{t.brief_viral}</p>
+                                        <p className="text-slate-400 text-[9px] md:text-[10px]">+5000 Pts</p>
+                                    </div>
+                                    <div className="flex flex-col items-center gap-2 p-3 md:p-4 bg-white/5 rounded-2xl border border-white/5">
+                                        <Crown size={24} className="text-purple-400 md:w-8 md:h-8" />
+                                        <p className="text-white font-bold uppercase text-[10px] md:text-xs">{t.brief_partner}</p>
+                                        <p className="text-slate-400 text-[9px] md:text-[10px]">+25K Pts</p>
+                                    </div>
+                                    <div className="flex flex-col items-center gap-2 p-3 md:p-4 bg-red-900/20 rounded-2xl border border-red-500/20">
+                                        <ZapOff size={24} className="text-red-500 md:w-8 md:h-8" />
+                                        <p className="text-red-500 font-bold uppercase text-[10px] md:text-xs">{t.brief_bots}</p>
+                                        <p className="text-red-400/60 text-[9px] md:text-[10px]">-3000 Pts</p>
+                                    </div>
+                                    <div className="flex flex-col items-center gap-2 p-3 md:p-4 bg-red-900/20 rounded-2xl border border-red-500/20">
+                                        <Flame size={24} className="text-orange-500 md:w-8 md:h-8" />
+                                        <p className="text-orange-500 font-bold uppercase text-[10px] md:text-xs">{t.brief_bad}</p>
+                                        <p className="text-orange-400/60 text-[9px] md:text-[10px]">-4 Sec</p>
+                                    </div>
+                                    <div className="flex flex-col items-center gap-2 p-3 md:p-4 bg-blue-900/20 rounded-2xl border border-blue-500/20">
+                                        <Activity size={24} className="text-blue-400 md:w-8 md:h-8" />
+                                        <p className="text-blue-400 font-bold uppercase text-[10px] md:text-xs">{t.brief_streak}</p>
+                                        <p className="text-blue-300/60 text-[9px] md:text-[10px]">+1 Sec</p>
+                                    </div>
                                 </div>
-                                <div className="flex flex-col items-center gap-2 p-3 md:p-4 bg-white/5 rounded-2xl border border-white/5">
-                                    <Rocket size={24} className="text-yellow-400 md:w-8 md:h-8" />
-                                    <p className="text-white font-bold uppercase text-[10px] md:text-xs">{t.brief_viral}</p>
-                                    <p className="text-slate-400 text-[9px] md:text-[10px]">+5000 Pts</p>
+                                <button onClick={startGame} className="bg-red-600 text-white px-10 py-4 md:px-12 md:py-5 rounded-2xl font-black uppercase tracking-widest hover:bg-white hover:text-black transition-all shadow-glow-red active:scale-95 text-xs md:text-sm">{t.btn_start}</button>
+                            </div>
+                        ) : timeLeft === 0 ? (
+                        <div className="animate-reveal space-y-6 md:space-y-8 w-full max-w-4xl mx-auto flex flex-col items-center font-black">
+                            <h3 className="text-white font-black text-3xl md:text-7xl uppercase italic tracking-tighter leading-none">{t.score_title}</h3>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6 w-full max-w-3xl items-stretch">
+                            <div className="flex flex-col p-6 bg-gradient-to-br from-red-600 to-red-900 border border-white/20 rounded-[2rem] md:rounded-[2.5rem] shadow-glow-red text-left">
+                                <div className="flex items-center gap-4 mb-4">
+                                    <div className="w-10 h-10 rounded-xl border-2 border-white/30 overflow-hidden"><img src={profileImageUrl} className="w-full h-full object-cover" alt="Lucien Lukes Freelance Marketing Montpellier" /></div>
+                                    <p className="text-white text-base font-black uppercase tracking-tighter italic leading-none">Lucien Lukes</p>
                                 </div>
-                                <div className="flex flex-col items-center gap-2 p-3 md:p-4 bg-white/5 rounded-2xl border border-white/5">
-                                    <Crown size={24} className="text-purple-400 md:w-8 md:h-8" />
-                                    <p className="text-white font-bold uppercase text-[10px] md:text-xs">{t.brief_partner}</p>
-                                    <p className="text-slate-400 text-[9px] md:text-[10px]">+25K Pts</p>
-                                </div>
-                                <div className="flex flex-col items-center gap-2 p-3 md:p-4 bg-red-900/20 rounded-2xl border border-red-500/20">
-                                    <ZapOff size={24} className="text-red-500 md:w-8 md:h-8" />
-                                    <p className="text-red-500 font-bold uppercase text-[10px] md:text-xs">{t.brief_bots}</p>
-                                    <p className="text-red-400/60 text-[9px] md:text-[10px]">-3000 Pts</p>
-                                </div>
-                                <div className="flex flex-col items-center gap-2 p-3 md:p-4 bg-red-900/20 rounded-2xl border border-red-500/20">
-                                    <Flame size={24} className="text-orange-500 md:w-8 md:h-8" />
-                                    <p className="text-orange-500 font-bold uppercase text-[10px] md:text-xs">{t.brief_bad}</p>
-                                    <p className="text-orange-400/60 text-[9px] md:text-[10px]">-4 Sec</p>
-                                </div>
-                                <div className="flex flex-col items-center gap-2 p-3 md:p-4 bg-blue-900/20 rounded-2xl border border-blue-500/20">
-                                    <Activity size={24} className="text-blue-400 md:w-8 md:h-8" />
-                                    <p className="text-blue-400 font-bold uppercase text-[10px] md:text-xs">{t.brief_streak}</p>
-                                    <p className="text-blue-300/60 text-[9px] md:text-[10px]">+2 Sec</p>
+                                <div className="mt-auto">
+                                <p className="text-white/40 text-[8px] font-black uppercase tracking-[0.4em]">{t.record}</p>
+                                <p className="text-white text-3xl md:text-5xl font-black tracking-tighter leading-none">3.5M</p>
                                 </div>
                             </div>
-                            <button onClick={startGame} className="bg-red-600 text-white px-10 py-4 md:px-12 md:py-5 rounded-2xl font-black uppercase tracking-widest hover:bg-white hover:text-black transition-all shadow-glow-red active:scale-95 text-xs md:text-sm">{t.btn_start}</button>
-                        </div>
-                    ) : timeLeft === 0 ? (
-                      <div className="animate-reveal space-y-6 md:space-y-8 w-full max-w-4xl mx-auto flex flex-col items-center font-black">
-                        <h3 className="text-white font-black text-3xl md:text-7xl uppercase italic tracking-tighter leading-none">{t.score_title}</h3>
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6 w-full max-w-3xl items-stretch">
-                           <div className="flex flex-col p-6 bg-gradient-to-br from-red-600 to-red-900 border border-white/20 rounded-[2rem] md:rounded-[2.5rem] shadow-glow-red text-left">
-                             <div className="flex items-center gap-4 mb-4">
-                                <div className="w-10 h-10 rounded-xl border-2 border-white/30 overflow-hidden"><img src={profileImageUrl} className="w-full h-full object-cover" alt="Lucien Lukes Freelance Marketing Montpellier" /></div>
-                                <p className="text-white text-base font-black uppercase tracking-tighter italic leading-none">Lucien Lukes</p>
-                             </div>
-                             <div className="mt-auto">
-                               <p className="text-white/40 text-[8px] font-black uppercase tracking-[0.4em]">{t.record}</p>
-                               <p className="text-white text-3xl md:text-5xl font-black tracking-tighter leading-none">10.5M</p>
-                             </div>
-                           </div>
-                           <div className="flex flex-col p-6 bg-white/[0.03] border border-white/10 rounded-[2rem] md:rounded-[2.5rem] shadow-3xl backdrop-blur-3xl text-left">
-                             <div className="flex items-center gap-4 mb-4"><div className="w-10 h-10 rounded-xl bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center text-emerald-500"><User size={20} /></div><p className="text-white text-base font-black uppercase tracking-tighter italic leading-none">{t.you}</p></div>
-                             <div className="mt-auto"><p className="text-slate-600 text-[8px] font-black uppercase tracking-[0.4em]">{t.score}</p><p className="text-red-500 text-3xl md:text-5xl font-black tracking-tighter leading-none">{formatScore(score)}</p></div>
-                           </div>
-                        </div>
-                        <div className="pt-4 space-y-6 w-full flex flex-col items-center">
-                            <div className="bg-red-600 text-white px-6 py-3 md:px-8 md:py-4 rounded-[2rem] font-black uppercase text-[10px] md:text-xs tracking-tight shadow-glow-red italic animate-bounce inline-block">"{t.taunt}"</div>
-                            <div className="flex gap-4 justify-center w-full">
-                                <button onClick={() => { setShowBriefing(true); setScore(0); }} className="bg-white text-black font-black uppercase text-[9px] tracking-[0.5em] py-4 px-6 md:py-5 md:px-8 rounded-2xl hover:bg-red-600 hover:text-white transition-all flex-1 max-w-[150px] active:scale-95">{t.retry}</button>
-                                <button onClick={openChat} className="bg-red-600 text-white font-black uppercase text-[9px] tracking-[0.5em] py-4 px-6 md:py-5 md:px-8 rounded-2xl hover:bg-white hover:text-black transition-all flex-1 max-w-[150px] active:scale-95">{t.contact}</button>
+                            <div className="flex flex-col p-6 bg-white/[0.03] border border-white/10 rounded-[2rem] md:rounded-[2.5rem] shadow-3xl backdrop-blur-3xl text-left">
+                                <div className="flex items-center gap-4 mb-4"><div className="w-10 h-10 rounded-xl bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center text-emerald-500"><User size={20} /></div><p className="text-white text-base font-black uppercase tracking-tighter italic leading-none">{t.you}</p></div>
+                                <div className="mt-auto"><p className="text-slate-600 text-[8px] font-black uppercase tracking-[0.4em]">{t.score}</p><p className="text-red-500 text-3xl md:text-5xl font-black tracking-tighter leading-none">{formatScore(score)}</p></div>
+                            </div>
+                            </div>
+                            <div className="pt-4 space-y-6 w-full flex flex-col items-center">
+                                <div className="bg-red-600 text-white px-6 py-3 md:px-8 md:py-4 rounded-[2rem] font-black uppercase text-[10px] md:text-xs tracking-tight shadow-glow-red italic animate-bounce inline-block">"{t.taunt}"</div>
+                                <div className="flex gap-4 justify-center w-full">
+                                    <button onClick={() => { setShowBriefing(true); setScore(0); }} className="bg-white text-black font-black uppercase text-[9px] tracking-[0.5em] py-4 px-6 md:py-5 md:px-8 rounded-2xl hover:bg-red-600 hover:text-white transition-all flex-1 max-w-[150px] active:scale-95">{t.retry}</button>
+                                    <button onClick={openChat} className="bg-red-600 text-white font-black uppercase text-[9px] tracking-[0.5em] py-4 px-6 md:py-5 md:px-8 rounded-2xl hover:bg-white hover:text-black transition-all flex-1 max-w-[150px] active:scale-95">{t.contact}</button>
+                                </div>
                             </div>
                         </div>
-                      </div>
-                    ) : null}
-                  </div>
-                ) : (
-                  <>
-                    {clickFeedbacks.map(f => <div key={f.id} style={{ left: `${f.x}%`, top: `${f.y}%` }} className={`absolute pointer-events-none font-black text-xl md:text-3xl uppercase animate-float-out z-50 ${f.color} drop-shadow-[0_0_10px_rgba(0,0,0,1)]`}>{f.msg}</div>)}
-                    {targets.map(t => {
-                        const IconComp = t.type === 'lead' ? Users : t.type === 'golden_rocket' ? Rocket : t.type === 'spam' ? ZapOff : t.type === 'vip' ? Crown : t.type === 'bad_buzz' ? Flame : Activity;
-                        return (
-                          <div key={t.id} onClick={(e) => { e.stopPropagation(); handleTargetClick(t.type, t.id, t.x, t.y); }} style={{ left: `${t.x}%`, top: `${t.y}%` }} className={`absolute transform -translate-x-1/2 -translate-y-1/2 p-6 md:p-8 rounded-full cursor-pointer transition-all hover:scale-125 z-10 flex items-center justify-center animate-reveal ${t.type === 'lead' ? 'bg-blue-600/30 border-2 border-blue-400 shadow-glow-blue' : ''} ${t.type === 'golden_rocket' ? 'bg-yellow-500/40 border-2 border-white animate-bounce shadow-glow-yellow' : ''} ${t.type === 'spam' ? 'bg-red-900/60 border-2 border-red-600' : ''} ${t.type === 'vip' ? 'bg-purple-600/40 border-2 border-white animate-pulse shadow-glow-purple' : ''} ${t.type === 'bad_buzz' ? 'bg-orange-600/40 border-2 border-orange-500' : ''} ${t.type === 'clock' ? 'bg-blue-400/40 border-2 border-white animate-float shadow-glow-blue' : ''}`}>
-                            <IconComp size={28} className={`md:w-8 md:h-8 ${t.type === 'golden_rocket' || t.type === 'clock' ? 'text-white' : ''}`} />
-                          </div>
-                        );
-                    })}
-                  </>
-                )}
-              </div>
+                        ) : null}
+                    </div>
+                    ) : (
+                    <>
+                        {clickFeedbacks.map(f => <div key={f.id} style={{ left: `${f.x}%`, top: `${f.y}%` }} className={`absolute pointer-events-none font-black text-xl md:text-3xl uppercase animate-float-out z-50 ${f.color} drop-shadow-[0_0_10px_rgba(0,0,0,1)]`}>{f.msg}</div>)}
+                        {targets.map(t => {
+                            const IconComp = t.type === 'lead' ? Users : t.type === 'golden_rocket' ? Rocket : t.type === 'spam' ? ZapOff : t.type === 'vip' ? Crown : t.type === 'bad_buzz' ? Flame : Activity;
+                            return (
+                            <div key={t.id} onClick={(e) => { e.stopPropagation(); handleTargetClick(t.type, t.id, t.x, t.y); }} style={{ left: `${t.x}%`, top: `${t.y}%` }} className={`absolute transform -translate-x-1/2 -translate-y-1/2 p-6 md:p-8 rounded-full cursor-pointer transition-all hover:scale-125 z-10 flex items-center justify-center animate-reveal ${t.type === 'lead' ? 'bg-blue-600/30 border-2 border-blue-400 shadow-glow-blue' : ''} ${t.type === 'golden_rocket' ? 'bg-yellow-500/40 border-2 border-white animate-bounce shadow-glow-yellow' : ''} ${t.type === 'spam' ? 'bg-red-900/60 border-2 border-red-600' : ''} ${t.type === 'vip' ? 'bg-purple-600/40 border-2 border-white animate-pulse shadow-glow-purple' : ''} ${t.type === 'bad_buzz' ? 'bg-orange-600/40 border-2 border-orange-500' : ''} ${t.type === 'clock' ? 'bg-blue-400/40 border-2 border-white animate-float shadow-glow-blue' : ''}`}>
+                                <IconComp size={28} className={`md:w-8 md:h-8 ${t.type === 'golden_rocket' || t.type === 'clock' ? 'text-white' : ''}`} />
+                            </div>
+                            );
+                        })}
+                    </>
+                    )}
+                </div>
             </div>
 
-            {/* --- NEW LOGIC SECTION --- */}
-            <div className="w-full max-w-5xl mx-auto mt-12 mb-12 p-8 md:p-12 bg-[#0a0a0a] border border-white/10 rounded-[2rem] relative overflow-hidden animate-reveal">
-                <div className="absolute top-0 right-0 w-64 h-64 bg-red-600/5 blur-[80px] rounded-full pointer-events-none"></div>
-                <div className="relative z-10 space-y-10">
-                    <div className="flex items-center gap-4">
-                        <Brain className="text-red-600 w-8 h-8 md:w-10 md:h-10" />
-                        <h3 className="text-2xl md:text-4xl font-black text-white uppercase italic tracking-tighter">{t.logic_title}</h3>
-                    </div>
-                    <p className="text-slate-400 text-lg md:text-xl font-medium leading-relaxed italic border-l-4 border-red-600/50 pl-6">
-                        "{t.logic_intro}"
-                    </p>
-                    <div className="space-y-8">
-                        <div className="flex flex-col md:flex-row gap-4 md:gap-8 items-start group">
-                            <div className="p-4 bg-white/5 rounded-2xl border border-white/5 text-red-500 group-hover:bg-red-600 group-hover:text-white transition-all shadow-xl">
-                                <Clock size={28} />
+                    {/* --- NEW LOGIC SECTION --- */}
+                    <div className="w-full max-w-5xl mx-auto mt-12 mb-12 p-8 md:p-12 bg-[#0a0a0a] border border-white/10 rounded-[2rem] relative overflow-hidden animate-reveal">
+                        <div className="absolute top-0 right-0 w-64 h-64 bg-red-600/5 blur-[80px] rounded-full pointer-events-none"></div>
+                        <div className="relative z-10 space-y-10">
+                            <div className="flex items-center gap-4">
+                                <Brain className="text-red-600 w-8 h-8 md:w-10 md:h-10" />
+                                <h3 className="text-2xl md:text-4xl font-black text-white uppercase italic tracking-tighter">{t.logic_title}</h3>
                             </div>
-                            <div className="space-y-2">
-                                <h4 className="text-white font-black uppercase text-lg tracking-wider">{t.logic_p1_title}</h4>
-                                <p className="text-slate-400 text-sm md:text-base leading-relaxed">{t.logic_p1_desc}</p>
+                            <p className="text-slate-400 text-lg md:text-xl font-medium leading-relaxed italic border-l-4 border-red-600/50 pl-6">
+                                "{t.logic_intro}"
+                            </p>
+                            <div className="space-y-8">
+                                <div className="flex flex-col md:flex-row gap-4 md:gap-8 items-start group">
+                                    <div className="p-4 bg-white/5 rounded-2xl border border-white/5 text-red-500 group-hover:bg-red-600 group-hover:text-white transition-all shadow-xl">
+                                        <Clock size={28} />
+                                    </div>
+                                    <div className="space-y-2">
+                                        <h4 className="text-white font-black uppercase text-lg tracking-wider">{t.logic_p1_title}</h4>
+                                        <p className="text-slate-400 text-sm md:text-base leading-relaxed">{t.logic_p1_desc}</p>
+                                    </div>
+                                </div>
+                                <div className="flex flex-col md:flex-row gap-4 md:gap-8 items-start group">
+                                    <div className="p-4 bg-white/5 rounded-2xl border border-white/5 text-blue-400 group-hover:bg-blue-600 group-hover:text-white transition-all shadow-xl">
+                                        <Target size={28} />
+                                    </div>
+                                    <div className="space-y-2">
+                                        <h4 className="text-white font-black uppercase text-lg tracking-wider">{t.logic_p2_title}</h4>
+                                        <p className="text-slate-400 text-sm md:text-base leading-relaxed">{t.logic_p2_desc}</p>
+                                    </div>
+                                </div>
+                                <div className="flex flex-col md:flex-row gap-4 md:gap-8 items-start group">
+                                    <div className="p-4 bg-white/5 rounded-2xl border border-white/5 text-yellow-400 group-hover:bg-yellow-500 group-hover:text-black transition-all shadow-xl">
+                                        <Zap size={28} />
+                                    </div>
+                                    <div className="space-y-2">
+                                        <h4 className="text-white font-black uppercase text-lg tracking-wider">{t.logic_p3_title}</h4>
+                                        <p className="text-slate-400 text-sm md:text-base leading-relaxed">{t.logic_p3_desc}</p>
+                                    </div>
+                                </div>
+                            </div>
+                            <div className="pt-8 border-t border-white/10 mt-4">
+                                <p className="text-white text-base md:text-lg font-medium leading-relaxed">
+                                    <span className="text-red-500 font-black uppercase tracking-wider mr-2">{t.logic_conc_title}</span>
+                                    {t.logic_conc_desc}
+                                </p>
                             </div>
                         </div>
-                        <div className="flex flex-col md:flex-row gap-4 md:gap-8 items-start group">
-                            <div className="p-4 bg-white/5 rounded-2xl border border-white/5 text-blue-400 group-hover:bg-blue-600 group-hover:text-white transition-all shadow-xl">
-                                <Target size={28} />
-                            </div>
-                            <div className="space-y-2">
-                                <h4 className="text-white font-black uppercase text-lg tracking-wider">{t.logic_p2_title}</h4>
-                                <p className="text-slate-400 text-sm md:text-base leading-relaxed">{t.logic_p2_desc}</p>
-                            </div>
-                        </div>
-                        <div className="flex flex-col md:flex-row gap-4 md:gap-8 items-start group">
-                            <div className="p-4 bg-white/5 rounded-2xl border border-white/5 text-yellow-400 group-hover:bg-yellow-500 group-hover:text-black transition-all shadow-xl">
-                                <Zap size={28} />
-                            </div>
-                            <div className="space-y-2">
-                                <h4 className="text-white font-black uppercase text-lg tracking-wider">{t.logic_p3_title}</h4>
-                                <p className="text-slate-400 text-sm md:text-base leading-relaxed">{t.logic_p3_desc}</p>
-                            </div>
-                        </div>
                     </div>
-                    <div className="pt-8 border-t border-white/10 mt-4">
-                        <p className="text-white text-base md:text-lg font-medium leading-relaxed">
-                            <span className="text-red-500 font-black uppercase tracking-wider mr-2">{t.logic_conc_title}</span>
-                            {t.logic_conc_desc}
-                        </p>
-                    </div>
-                </div>
-            </div>
+    
 
             <div className="flex justify-center pt-8">
                 <button onClick={() => navigateTo('home')} className="flex items-center gap-6 text-slate-500 hover:text-white font-black uppercase text-[10px] tracking-[0.8em] transition-all group active:scale-95"><ArrowRight className="rotate-180 group-hover:-translate-x-4 transition-transform duration-500" size={20} /> {t.back}</button>
@@ -1216,8 +1539,29 @@ const App = () => {
   const [selectedData, setSelectedData] = useState(null);
   const [isChatOpen, setIsChatOpen] = useState(false);
   const [copyFeedback, setCopyFeedback] = useState(false);
+  const [toast, setToast] = useState(null);
   const [activeSpell, setActiveSpell] = useState(null);
   const [lang, setLang] = useState('fr');
+  const [isMuted, setIsMuted] = useState(false);
+  
+  const [foundSecrets, setFoundSecrets] = useState([]);
+
+  // KONAMI CODE LISTENER
+  useEffect(() => {
+    let keys = [];
+    const konami = ['ArrowUp', 'ArrowUp', 'ArrowDown', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'ArrowLeft', 'ArrowRight', 'b', 'a'];
+    
+    const handler = (e) => {
+        keys.push(e.key);
+        keys = keys.slice(-10);
+        if (JSON.stringify(keys) === JSON.stringify(konami)) {
+            triggerSpell('konami');
+        }
+    };
+    
+    window.addEventListener('keydown', handler);
+    return () => window.removeEventListener('keydown', handler);
+  }, []);
 
   const profileImageUrl = "https://res.cloudinary.com/dex721lje/image/upload/v1740686437/photo_de_profil_kvhg3h.png"; 
 
@@ -1228,8 +1572,10 @@ const App = () => {
   const testimonials = getTestimonials(lang);
 
   const playSound = useCallback((freq, type = 'sine', duration = 0.1) => {
+    if (isMuted) return; // Mute check
     try {
       const ctx = audioSystem.get();
+      if (!ctx) return;
       const osc = ctx.createOscillator();
       const gain = ctx.createGain();
       osc.type = type;
@@ -1241,9 +1587,9 @@ const App = () => {
       osc.start();
       osc.stop(ctx.currentTime + duration);
     } catch (e) {}
-  }, []);
+  }, [isMuted]);
 
-  // --- SECURITY ---
+  // --- SECURITY LOGIC ---
   useEffect(() => {
     const handleContext = (e) => e.preventDefault();
     const handleKey = (e) => {
@@ -1253,6 +1599,7 @@ const App = () => {
     };
     document.addEventListener('contextmenu', handleContext);
     document.addEventListener('keydown', handleKey);
+
     return () => {
       document.removeEventListener('contextmenu', handleContext);
       document.removeEventListener('keydown', handleKey);
@@ -1265,19 +1612,39 @@ const App = () => {
   }, []);
 
   const triggerSpell = (spellType) => {
-    let spellData = { type: spellType, text: '' };
-    if (spellType === 'lumos') {
-      playSound(1200, 'sine', 0.5);
-      spellData.text = "J'ai fondé PoudlardRP très jeune, sans expérience et mon jeu fait avec passion s'est retrouvé sur le devant de la scène sur un live de 30 000 personnes juste avec une campagne de mailing. Une preuve vivante que la stratégie bat le budget.";
-    } else if (spellType === 'alohomora') {
-      playSound(800, 'triangle', 0.5);
-      spellData.text = "J'ai passé mon bac en candidat libre après avoir arrêté les cours et j'ai finis par un master en marketing digital.";
-    } else if (spellType === 'wingardium') {
-      playSound(600, 'square', 0.5);
-      spellData.text = "Lors d'un lancement, notre serveur a crashé sous la pression. Panique à bord ? Non. J'ai tweeté 'Nos serveurs sont en PLS, vous êtes trop chauds'. Le tweet est parti viral, transformant un bug technique en record historique de connexion à la réouverture.";
-    }
-    setActiveSpell(spellData);
-    setTimeout(() => setActiveSpell(null), 10000);
+    // Only process if not found yet
+    setFoundSecrets(prev => {
+        if (prev.includes(spellType)) return prev;
+
+        let spellData = { type: spellType, text: '' };
+        if (spellType === 'lumos') {
+        playSound(1200, 'sine', 0.5);
+        spellData.text = "J'ai fondé PoudlardRP très jeune, sans expérience et mon jeu fait avec passion s'est retrouvé sur le devant de la scène sur un live de 30 000 personnes juste avec une campagne de mailing. Une preuve vivante que la stratégie bat le budget.";
+        } else if (spellType === 'alohomora') {
+        playSound(800, 'triangle', 0.5);
+        spellData.text = "J'ai passé mon bac en candidat libre après avoir arrêté les cours et j'ai finis par un master en marketing digital.";
+        } else if (spellType === 'wingardium') {
+        playSound(600, 'square', 0.5);
+        spellData.text = "Lors d'un lancement, notre serveur a crashé sous la pression. Panique à bord ? Non. J'ai tweeté 'Nos serveurs sont en PLS, vous êtes trop chauds'. Le tweet est parti viral, transformant un bug technique en record historique de connexion à la réouverture.";
+        } else if (spellType === 'konami') {
+            playSound(1500, 'sawtooth', 0.8);
+            spellData.text = "KONAMI CODE ACTIVATED! Vous avez débloqué l'accès développeur secret (fictif, mais bravo pour la ref).";
+        } else if (spellType === 'longpress') {
+            playSound(400, 'sine', 1);
+            spellData.text = "Vous avez trouvé le secret de la persévérance. Parfois, il suffit de tenir bon pour voir le résultat.";
+        } else if (spellType === 'cv_download') {
+            // Removed as requested
+        } else if (spellType === 'highscore') {
+            playSound(800, 'square', 1);
+            spellData.text = "Score incroyable ! Vous avez l'étoffe d'un Growth Hacker.";
+        }
+        
+        if (spellData.text) {
+            setActiveSpell(spellData);
+        }
+
+        return [...prev, spellType];
+    });
   };
 
   const openModal = useCallback((type, data) => {
@@ -1291,17 +1658,32 @@ const App = () => {
     setSelectedData(null);
   }, []);
 
+  const showToast = useCallback((msg) => {
+      setToast(msg);
+      setTimeout(() => setToast(null), 3000);
+  }, []);
+
   const copyDiscord = useCallback(() => {
-    const el = document.createElement('textarea');
-    el.value = 'MrLegya';
-    document.body.appendChild(el);
-    el.select();
-    document.execCommand('copy');
-    document.body.removeChild(el);
-    setCopyFeedback(true);
-    setTimeout(() => setCopyFeedback(false), 2000);
-    playSound(600);
-  }, [playSound]);
+    navigator.clipboard.writeText('MrLegya').then(() => {
+        setCopyFeedback(true);
+        showToast(t.toast.discord_copied);
+        playSound(600);
+        setTimeout(() => setCopyFeedback(false), 2000);
+    });
+  }, [playSound, t, showToast]);
+
+  const copyEmail = useCallback(() => {
+      navigator.clipboard.writeText('l.lukes@outlook.fr').then(() => {
+          showToast(t.toast.email_copied);
+          playSound(600);
+      });
+  }, [playSound, t, showToast]);
+
+  const sayHello = useCallback(() => {
+      playSound(1000, 'sine', 0.2); // Greeting sound
+      showToast(t.bio.hello);
+  }, [playSound, t, showToast]);
+
 
   useEffect(() => {
     const handleScroll = () => {
@@ -1336,27 +1718,33 @@ const App = () => {
     document.body.removeChild(link);
   };
 
+  if (!t) return null; // Safe guard if text is loading or undefined
+
   return (
     <div className={`min-h-screen bg-[#020202] text-slate-300 font-sans selection:bg-red-600 selection:text-white overflow-x-hidden font-black`}>
       <div className="fixed inset-0 pointer-events-none -z-50 bg-[#020202]">
         <div className="absolute top-0 left-0 w-full h-full bg-[radial-gradient(ellipse_at_top,rgba(220,38,38,0.05),transparent_60%)]" />
       </div>
 
+      {toast && <Toast message={toast} onClose={() => setToast(null)} />}
+      
+      <QuestTracker found={foundSecrets} t={t.quest} />
+
       {activeSpell && (
-        <div className="fixed inset-0 z-[1000] bg-black/95 flex flex-col items-center justify-center p-8 text-center animate-reveal">
-            <div className={`absolute inset-0 bg-[radial-gradient(circle_at_center,${activeSpell.type === 'lumos' ? 'rgba(255,255,255,0.1)' : activeSpell.type === 'alohomora' ? 'rgba(251,191,36,0.1)' : 'rgba(147,51,234,0.1)'}_0%,transparent_70%)] animate-pulse`} />
-            <Wand2 size={64} className={`${activeSpell.type === 'lumos' ? 'text-white' : activeSpell.type === 'alohomora' ? 'text-amber-400' : 'text-purple-500'} mb-6 animate-bounce shadow-glow-white`} />
-            <h2 className="text-4xl md:text-7xl font-black text-white uppercase italic tracking-tighter mb-4 animate-lumos-text" style={{textShadow: '0 0 30px rgba(255,255,255,0.8)'}}>
-              {activeSpell.type === 'lumos' ? 'Lumos Maxima' : activeSpell.type === 'alohomora' ? 'Alohomora' : 'Wingardium Leviosa'}
+        <div className="fixed inset-0 z-[1000] bg-black/95 flex flex-col items-center justify-center p-8 text-center animate-reveal cursor-pointer" onClick={() => setActiveSpell(null)}>
+            <div className={`absolute inset-0 bg-[radial-gradient(circle_at_center,${activeSpell.type === 'lumos' ? 'rgba(255,255,255,0.1)' : activeSpell.type === 'alohomora' ? 'rgba(251,191,36,0.1)' : 'rgba(147,51,234,0.1)'}_0%,transparent_70%)] animate-pulse pointer-events-none`} />
+            <Wand2 size={64} className={`${activeSpell.type === 'lumos' ? 'text-white' : activeSpell.type === 'alohomora' ? 'text-amber-400' : 'text-purple-500'} mb-6 animate-bounce shadow-glow-white pointer-events-none`} />
+            <h2 className="text-4xl md:text-7xl font-black text-white uppercase italic tracking-tighter mb-4 animate-lumos-text pointer-events-none" style={{textShadow: '0 0 30px rgba(255,255,255,0.8)'}}>
+              {activeSpell.type === 'lumos' ? 'Lumos Maxima' : activeSpell.type === 'alohomora' ? 'Alohomora' : activeSpell.type === 'konami' ? 'KONAMI CODE' : activeSpell.type === 'longpress' ? 'TIME WARP' : activeSpell.type === 'highscore' ? 'GROWTH HACKER' : 'Wingardium Leviosa'}
             </h2>
-            <p className={`${activeSpell.type === 'lumos' ? 'text-white' : activeSpell.type === 'alohomora' ? 'text-amber-500' : 'text-purple-500'} font-black uppercase tracking-[0.5em] text-xs mb-8`}>✨ Easter Egg Découvert ✨</p>
-            <div className="max-w-2xl bg-white/5 border border-white/10 p-8 rounded-[2rem] relative overflow-hidden">
+            <p className={`${activeSpell.type === 'lumos' ? 'text-white' : activeSpell.type === 'alohomora' ? 'text-amber-500' : 'text-purple-500'} font-black uppercase tracking-[0.5em] text-xs mb-8 pointer-events-none`}>✨ Easter Egg Découvert ✨</p>
+            <div className="max-w-2xl bg-white/5 border border-white/10 p-8 rounded-[2rem] relative overflow-hidden pointer-events-none">
                 <div className={`absolute top-0 left-0 w-1 h-full bg-gradient-to-b ${activeSpell.type === 'lumos' ? 'from-white via-slate-400 to-slate-600' : activeSpell.type === 'alohomora' ? 'from-amber-400 via-orange-500 to-red-600' : 'from-purple-400 via-indigo-500 to-blue-600'}`} />
                 <p className="text-white text-lg md:text-xl font-medium leading-relaxed italic">
                   "{activeSpell.text}"
                 </p>
             </div>
-            <p className="mt-8 text-slate-600 text-xs uppercase tracking-widest animate-pulse">L'effet se dissipera bientôt...</p>
+            <p className="mt-8 text-slate-600 text-xs uppercase tracking-widest animate-pulse pointer-events-none">Click anywhere to close</p>
         </div>
       )}
 
@@ -1366,16 +1754,23 @@ const App = () => {
         <p>Expert en management de créateurs de contenu et scaling infrastructure.</p>
       </div>
 
-      <Navbar scrolled={scrolled} view={view} navigateTo={navigateTo} openChat={() => setIsChatOpen(true)} lang={lang} setLang={setLang} t={t.nav} />
+      <Navbar scrolled={scrolled} view={view} navigateTo={navigateTo} openChat={() => setIsChatOpen(true)} lang={lang} setLang={setLang} t={t.nav} isMuted={isMuted} toggleMute={() => setIsMuted(!isMuted)} />
       <ScrollProgress />
 
-      <main className="animate-reveal">
+      <main className="animate-reveal" style={{willChange: 'transform', backfaceVisibility: 'hidden'}}>
         {view === 'home' && (
           <>
-            <HeroSection openChat={() => setIsChatOpen(true)} playSound={playSound} profileImageUrl={profileImageUrl} t={t.hero} handleDownload={handleDownload} />
+            <HeroSection 
+                openChat={() => setIsChatOpen(true)} 
+                playSound={playSound} 
+                profileImageUrl={profileImageUrl} 
+                t={t.hero} 
+                handleDownload={handleDownload} 
+                triggerLongPress={() => triggerSpell('longpress')}
+            />
             <TrustStrip lang={lang} t={t.trust} />
             
-            <section className="py-24 md:py-48 px-6 text-left relative">
+            <section className="py-24 md:py-48 px-6 text-left relative" style={{willChange: 'transform', backfaceVisibility: 'hidden'}}>
               <div className="max-w-7xl mx-auto space-y-16 md:space-y-32">
                 <div className="flex flex-col md:flex-row justify-between items-end gap-6 md:gap-10">
                   <div className="space-y-3 md:space-y-4">
@@ -1403,7 +1798,7 @@ const App = () => {
 
             <Experiences experiences={experiences} onSpell={triggerSpell} t={t.exp} />
 
-            <section className="py-24 md:py-48 px-6 bg-black/80 md:backdrop-blur-3xl font-black relative">
+            <section className="py-24 md:py-48 px-6 bg-black/80 md:backdrop-blur-3xl font-black relative" style={{willChange: 'transform', backfaceVisibility: 'hidden'}}>
                <div className="max-w-6xl mx-auto text-center">
                   <div className="mb-20 md:mb-32 space-y-4 md:space-y-6"><p className="text-red-500 uppercase text-[10px] md:text-[11px] tracking-[1em]">{t.cursus.sub}</p><h3 className="text-5xl md:text-7xl lg:text-[90px] font-black text-white uppercase tracking-tighter italic opacity-95 leading-none">{t.cursus.title}</h3></div>
                   <CursusSectionComp t={t.cursus} />
@@ -1418,6 +1813,7 @@ const App = () => {
                 <div className="pt-16 md:pt-24 space-y-6">
                     <div className="flex justify-center gap-8 md:gap-10">
                         <a href="https://www.linkedin.com/in/lucien-lukes-1b1a84193/" target="_blank" rel="noopener noreferrer" className="text-slate-600 hover:text-white transition-colors"><Linkedin size={20} className="md:w-6 md:h-6" /></a>
+                        <button onClick={copyEmail} className="text-slate-600 hover:text-white transition-colors cursor-pointer"><Mail size={20} className="md:w-6 md:h-6" /></button>
                     </div>
                     <p className="text-slate-800 font-black uppercase text-[9px] md:text-[11px] tracking-[1.5em] md:tracking-[2em] opacity-40">{t.footer.copyright}</p>
                 </div>
@@ -1427,7 +1823,7 @@ const App = () => {
         )}
 
         {view === 'bio' && (
-          <SectionBio profileImageUrl={profileImageUrl} navigateTo={navigateTo} copyDiscord={copyDiscord} copyFeedback={copyFeedback} playSound={playSound} onSpell={triggerSpell} t={t.bio} handleDownload={handleDownload} />
+          <SectionBio profileImageUrl={profileImageUrl} navigateTo={navigateTo} copyDiscord={copyDiscord} copyFeedback={copyFeedback} playSound={playSound} onSpell={triggerSpell} t={t.bio} handleDownload={handleDownload} sayHello={sayHello} />
         )}
 
         {view === 'play' && (
@@ -1470,7 +1866,7 @@ const App = () => {
         )}
       </Modal>
 
-      {isChatOpen && <CollaborationForm onClose={() => setIsChatOpen(false)} playSound={playSound} t={t.form} stackData={stackData} />}
+      {isChatOpen && <CollaborationForm onClose={() => setIsChatOpen(false)} playSound={playSound} t={t.form} stackData={stackData} questCompleted={foundSecrets.length >= 4} />}
 
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&display=swap');
@@ -1486,6 +1882,7 @@ const App = () => {
         .shadow-glow-red { box-shadow: 0 0 50px rgba(220, 38, 38, 0.4); }
         .shadow-glow-emerald { box-shadow: 0 0 40px rgba(16, 185, 129, 0.4); }
         .shadow-glow-white { box-shadow: 0 0 40px rgba(255, 255, 255, 0.6); }
+        .shadow-glow-yellow { box-shadow: 0 0 40px rgba(234, 179, 8, 0.4); }
         @keyframes float { 0%, 100% { transform: translateY(0px); } 50% { transform: translateY(-10px); } }
         /* Animation flottante désactivée sur mobile pour perf */
         @media (min-width: 768px) {
@@ -1502,7 +1899,9 @@ const App = () => {
         @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
         @keyframes fade-in-up { from { opacity: 0; transform: translateY(30px); } to { opacity: 1; transform: translateY(0); } }
         .animate-fade-in-up { animation: fade-in-up 0.8s cubic-bezier(0.2, 0.8, 0.2, 1) forwards; opacity: 0; }
-        @keyframes lumos-flash { 0% { opacity: 0; } 50% { opacity: 1; } 100% { opacity: 0; } }
+        @keyframes lumos-flash { 
+            0% { opacity: 0; } 50% { opacity: 1; } 100% { opacity: 0; } 
+        }
         .animate-lumos-flash { 
             background: radial-gradient(circle, rgba(255,255,255,1) 0%, rgba(220,240,255,0.5) 50%, transparent 70%);
             animation: lumos-magic 2s ease-out forwards;
@@ -1520,6 +1919,13 @@ const App = () => {
         }
         @keyframes shimmer-fast { from { transform: translateX(-100%); } to { transform: translateX(100%); } }
         .animate-shimmer-fast { animation: shimmer-fast 1.5s infinite; }
+        
+        @keyframes scroll-normal { 
+            from { transform: translateX(0); } 
+            to { transform: translateX(-33.33%); } 
+        }
+        .animate-scroll-normal { animation: scroll-normal 20s linear infinite; }
+
         @keyframes wave { 0% { transform: rotate(0deg); } 10% { transform: rotate(14deg); } 20% { transform: rotate(-8deg); } 30% { transform: rotate(14deg); } 40% { transform: rotate(-4deg); } 50% { transform: rotate(10deg); } 60% { transform: rotate(0deg); } 100% { transform: rotate(0deg); } }
         .animate-wave { animation: wave 2s infinite; }
         @keyframes quick-pop { from { opacity: 0; transform: scale(0.95); } to { opacity: 1; transform: scale(1); } }
