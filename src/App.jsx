@@ -8,7 +8,7 @@ import {
   School, Coins, Activity, Flame, Crown, 
   Download, User, ZapOff, 
   MapPin, ChevronDown, Sparkle, Brain, Focus, Workflow,
-  Linkedin, Github, Briefcase as Job, Megaphone, Compass, Menu, Hash
+  Linkedin, Github, Briefcase as Job, Megaphone, Compass, Menu, Hash, Clock
 } from 'lucide-react';
 
 // --- CONFIGURATION SYSTÈME SONORE ---
@@ -108,7 +108,17 @@ const TEXTS = {
       taunt: "Tu vois, je suis meilleur... Alors contacte-moi ! 😉",
       retry: "Relancer",
       contact: "Contact",
-      back: "Retour"
+      back: "Retour",
+      logic_title: "LA LOGIQUE DERRIÈRE CE JEU",
+      logic_intro: "Ce mini-jeu n'est pas qu'un simple divertissement, c'est une métaphore de mon métier.",
+      logic_p1_title: "Le Timer (Stress)",
+      logic_p1_desc: "En start-up ou lancement de produit, le temps est l'ennemi. Il faut exécuter vite.",
+      logic_p2_title: "Les Cibles (Opportunités)",
+      logic_p2_desc: "Elles bougent vite. Il faut savoir différencier un Lead Qualifié (Bleu) d'un Bad Buzz (Feu) ou d'un Bot (Rouge).",
+      logic_p3_title: "Le Multiplicateur (Hype)",
+      logic_p3_desc: "C'est la viralité. Quand on touche le bon levier (Golden Rocket), les résultats ne sont pas linéaires, ils sont exponentiels.",
+      logic_conc_title: "Mon rôle :",
+      logic_conc_desc: "Je suis celui qui vous aide à viser juste, éviter les pièges et déclencher ce fameux multiplicateur de croissance."
     },
     form: {
       title: "Collaborer.",
@@ -222,7 +232,17 @@ const TEXTS = {
       taunt: "See, I'm better... So contact me! 😉",
       retry: "Retry",
       contact: "Contact",
-      back: "Back"
+      back: "Back",
+      logic_title: "THE LOGIC BEHIND THIS GAME",
+      logic_intro: "This mini-game isn't just entertainment, it's a metaphor for my work.",
+      logic_p1_title: "The Timer (Stress)",
+      logic_p1_desc: "In startups or product launches, time is the enemy. You must execute fast.",
+      logic_p2_title: "The Targets (Opportunities)",
+      logic_p2_desc: "They move fast. You must distinguish a Qualified Lead (Blue) from a Bad Buzz (Fire) or a Bot (Red).",
+      logic_p3_title: "The Multiplier (Hype)",
+      logic_p3_desc: "This is virality. When you hit the right lever (Golden Rocket), results aren't linear, they are exponential.",
+      logic_conc_title: "My Role:",
+      logic_conc_desc: "I am the one helping you aim true, avoid traps, and trigger that famous growth multiplier."
     },
     form: {
       title: "Collaborate.",
@@ -1080,6 +1100,55 @@ const GrowthLabGameComp = memo(({ navigateTo, playSound, profileImageUrl, openCh
                   </>
                 )}
               </div>
+            </div>
+
+            {/* --- NEW LOGIC SECTION --- */}
+            <div className="w-full max-w-5xl mx-auto mt-12 mb-12 p-8 md:p-12 bg-[#0a0a0a] border border-white/10 rounded-[2rem] relative overflow-hidden animate-reveal">
+                <div className="absolute top-0 right-0 w-64 h-64 bg-red-600/5 blur-[80px] rounded-full pointer-events-none"></div>
+                <div className="relative z-10 space-y-10">
+                    <div className="flex items-center gap-4">
+                        <Brain className="text-red-600 w-8 h-8 md:w-10 md:h-10" />
+                        <h3 className="text-2xl md:text-4xl font-black text-white uppercase italic tracking-tighter">{t.logic_title}</h3>
+                    </div>
+                    <p className="text-slate-400 text-lg md:text-xl font-medium leading-relaxed italic border-l-4 border-red-600/50 pl-6">
+                        "{t.logic_intro}"
+                    </p>
+                    <div className="space-y-8">
+                        <div className="flex flex-col md:flex-row gap-4 md:gap-8 items-start group">
+                            <div className="p-4 bg-white/5 rounded-2xl border border-white/5 text-red-500 group-hover:bg-red-600 group-hover:text-white transition-all shadow-xl">
+                                <Clock size={28} />
+                            </div>
+                            <div className="space-y-2">
+                                <h4 className="text-white font-black uppercase text-lg tracking-wider">{t.logic_p1_title}</h4>
+                                <p className="text-slate-400 text-sm md:text-base leading-relaxed">{t.logic_p1_desc}</p>
+                            </div>
+                        </div>
+                        <div className="flex flex-col md:flex-row gap-4 md:gap-8 items-start group">
+                            <div className="p-4 bg-white/5 rounded-2xl border border-white/5 text-blue-400 group-hover:bg-blue-600 group-hover:text-white transition-all shadow-xl">
+                                <Target size={28} />
+                            </div>
+                            <div className="space-y-2">
+                                <h4 className="text-white font-black uppercase text-lg tracking-wider">{t.logic_p2_title}</h4>
+                                <p className="text-slate-400 text-sm md:text-base leading-relaxed">{t.logic_p2_desc}</p>
+                            </div>
+                        </div>
+                        <div className="flex flex-col md:flex-row gap-4 md:gap-8 items-start group">
+                            <div className="p-4 bg-white/5 rounded-2xl border border-white/5 text-yellow-400 group-hover:bg-yellow-500 group-hover:text-black transition-all shadow-xl">
+                                <Zap size={28} />
+                            </div>
+                            <div className="space-y-2">
+                                <h4 className="text-white font-black uppercase text-lg tracking-wider">{t.logic_p3_title}</h4>
+                                <p className="text-slate-400 text-sm md:text-base leading-relaxed">{t.logic_p3_desc}</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div className="pt-8 border-t border-white/10 mt-4">
+                        <p className="text-white text-base md:text-lg font-medium leading-relaxed">
+                            <span className="text-red-500 font-black uppercase tracking-wider mr-2">{t.logic_conc_title}</span>
+                            {t.logic_conc_desc}
+                        </p>
+                    </div>
+                </div>
             </div>
 
             <div className="flex justify-center pt-8">
