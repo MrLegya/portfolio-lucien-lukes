@@ -9,7 +9,7 @@ import {
   Ghost, Download, User, Coffee, Terminal, Hash, ZapOff, AlertTriangle,
   Zap as Bolt, Quote, Copy, Code, Zap as Fast, Disc, MapPin, MousePointer,
   Wand, Timer as Clock, ChevronDown, Sparkle, Brain, Focus, Workflow,
-  Shield, StarHalf, Briefcase, Linkedin, Youtube, Command, Briefcase as Job, Map, Box, Megaphone, Compass
+  Shield, StarHalf, Briefcase, Linkedin, Youtube, Command, Briefcase as Job, Map, Box, Megaphone, Compass, Menu
 } from 'lucide-react';
 
 // --- CONFIGURATION SYSTÈME SONORE ---
@@ -28,24 +28,10 @@ const formatScore = (num) => {
 };
 
 // --- DONNÉES ---
-const STATS_DATA = [
-  { 
-    id: 'clients', label: 'Satisfaction', value: '100%', subtext: 'Qualité Engagement', icon: Award, color: "from-yellow-500/20", 
-    detail: "Une exigence absolue sur le ROI et l'excellence opérationnelle.", 
-    metrics: ["Surveillance Analytics 24/7", "Processus Scaling Validés", "Projets à haute visibilité"],
-    testimonials: [
-      { author: "BayJz", text: "“On stagnait à 20 joueurs. En quelques semaines avec Lucien, on est passé à plusieurs centaines d'actifs. Il sait exactement où appuyer.”" },
-      { author: "Client E-commerce", text: "“Une vision claire et des solutions immédiatement applicables. Trafic SEO doublé en moins de 3 mois.”" }
-    ]
-  },
-  { id: 'tiktok', label: 'Impact Viral', value: '10M+', subtext: 'Vues Short-Content', icon: TrendingUp, color: "from-red-500/20", detail: "Domination des algorithmes de short-content via des concepts à haute-rétention.", metrics: ["Concepts Narratifs", "Optimisation de l'Attention"] },
-  { id: 'scaling', label: 'Scaling Infra', value: '20M+', subtext: 'Hits Serveurs', icon: Zap, color: "from-emerald-500/20", detail: "Expertise en scaling massif et gestion de plateformes à fort trafic.", metrics: ["Optimisation Latence", "Architecture Micro-services"] },
-  { 
-    id: 'network', label: 'Management Talents', value: '300+', subtext: 'Créateurs FR/USA/ESP/IT/DE', icon: Share2, color: "from-blue-500/20", 
-    detail: "J'ai un gros carnet d'adresses d'influence pour vos projets, couvrant les marchés FR, USA, Espagne, Italie et Allemagne.", 
-    metrics: ["Sourcing International", "Gestion d'OP Directe", "Réseau d'agents locaux"],
-    testimonials: [{ author: "Talent Manager", text: "“Lucien gère d'une main de maître les relations entre marques et créateurs. Il comprend les deux mondes.”" }]
-  },
+const TESTIMONIALS_DATA = [
+  { id: 1, name: "Thomas", role: "Fondateur Serveur SkyBlock (FR)", text: "On stagnait à 50 joueurs simultanés. Après l'audit de Lucien et la refonte de l'acquisition, on a tapé les 500 en un mois. Il connait les codes par coeur." },
+  { id: 2, name: "Sarah L.", role: "CMO - SaaS B2B", text: "J'avais peur de l'approche 'gaming' pour notre boîte très corporate. Finalement, c'est cette créativité qui nous a permis de débloquer notre coût par lead. Bluffant." },
+  { id: 3, name: "M. Gauthier", role: "Directeur E-commerce", text: "Pas de blabla, que des résultats. Il a géré notre campagne d'influence de A à Z avec une rigueur militaire. ROI x4." }
 ];
 
 const EXPERIENCES_DATA = [
@@ -71,7 +57,7 @@ const EXPERIENCES_DATA = [
 ];
 
 const STACK_DATA = [
-  { name: "Influence Marketing", icon: Share2, category: "Social", simple: "Connecter votre marque aux bonnes personnes pour créer de la confiance.", definition: "Partenariats avec des créateurs de contenu.", popular: true, actions: ["Sourcing via Data Scraping", "Contrats Performance (CPA)", "Tunnels de Conversion Dédiés"] },
+  { name: "Influence Marketing", icon: Share2, category: "Social", simple: "Connecter votre marque aux bonnes personnes pour créer de la confiance.", definition: "Partenariats avec des créateurs de contenu.", popular: true, extraInfo: "Carnet d'adresses : 300+ Créateurs Internationaux (FR/US/DE/IT).", actions: ["Sourcing via Data Scraping", "Contrats Performance (CPA)", "Tunnels de Conversion Dédiés"] },
   { name: "SEO / SEM", icon: Search, category: "Acquisition", simple: "Être trouvé immédiatement par ceux qui veulent acheter votre produit.", definition: "Optimisation Google & Publicité ciblée.", actions: ["Topic Clusters & Content Silos", "Audit Core Web Vitals", "Google Ads ROI-Driven"] },
   { name: "Développeur React", icon: Code, category: "Tech", simple: "Développer des applications web ultra-performantes comme celle-ci.", definition: "Création de sites & apps modernes.", isNew: true, actions: ["React & Tailwind", "Animations Framer Motion", "Expérience Utilisateur (UX)"] },
   { name: "ADS (Tiktok, FB, Google)", icon: Megaphone, category: "Paid Media", simple: "Campagnes publicitaires ultra-ciblées pour un ROI immédiat.", definition: "Acquisition payante multicanale.", actions: ["A/B Testing Massif", "Ciblage Comportemental", "Analytics Cohortes"] },
@@ -82,14 +68,42 @@ const STACK_DATA = [
 // --- COMPOSANTS ---
 
 const TrustStrip = memo(() => (
-  <div className="py-8 md:py-10 border-y border-white/5 bg-white/[0.02] overflow-hidden backdrop-blur-sm relative z-30">
-    <div className="max-w-7xl mx-auto px-6 flex flex-wrap justify-center lg:justify-between gap-6 md:gap-8 items-center text-slate-500 font-bold uppercase text-[9px] md:text-[10px] tracking-[0.2em]">
-      <div className="flex items-center gap-3"><ShieldCheck size={18} className="text-emerald-500" /> 100% Satisfaction Client</div>
-      <div className="flex items-center gap-3"><Activity size={18} className="text-red-500" /> +50 Projets Accompagnés</div>
-      <div className="flex items-center gap-3"><Globe2 size={18} className="text-blue-500" /> Portée Internationale</div>
-      <div className="flex items-center gap-3"><Lock size={18} className="text-yellow-500" /> Confidentialité Garantie</div>
+  <div className="py-6 md:py-10 border-y border-white/5 bg-white/[0.02] overflow-hidden backdrop-blur-sm relative z-30">
+    <div className="max-w-7xl mx-auto px-6 flex flex-wrap justify-center lg:justify-between gap-4 md:gap-8 items-center text-slate-500 font-bold uppercase text-[9px] md:text-[10px] tracking-[0.2em]">
+      <div className="flex items-center gap-2 md:gap-3"><ShieldCheck size={16} className="text-emerald-500" /> 100% Satisfaction</div>
+      <div className="flex items-center gap-2 md:gap-3"><Activity size={16} className="text-red-500" /> +50 Projets</div>
+      <div className="flex items-center gap-2 md:gap-3"><Globe2 size={16} className="text-blue-500" /> International</div>
+      <div className="flex items-center gap-2 md:gap-3"><Lock size={16} className="text-yellow-500" /> Confidentialité</div>
     </div>
   </div>
+));
+
+const TestimonialsSection = memo(() => (
+  <section className="py-24 md:py-40 px-6 relative font-black border-t border-white/5">
+    <div className="max-w-7xl mx-auto space-y-16 md:space-y-24">
+      <div className="text-center space-y-4">
+        <p className="text-red-500 font-black uppercase text-[10px] md:text-[11px] tracking-[0.8em]">Confiance</p>
+        <h2 className="text-4xl md:text-7xl font-black text-white uppercase tracking-tighter italic">Parole de Pro.</h2>
+      </div>
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 md:gap-8">
+        {TESTIMONIALS_DATA.map((t) => (
+          <div key={t.id} className="bg-white/5 border border-white/10 p-8 rounded-[2rem] flex flex-col gap-6 hover:border-red-600/50 transition-colors">
+            <div className="flex gap-1">
+              {[...Array(5)].map((_, i) => <Star key={i} size={14} className="text-yellow-500 fill-yellow-500" />)}
+            </div>
+            <p className="text-slate-300 font-medium italic text-sm md:text-base leading-relaxed">"{t.text}"</p>
+            <div className="mt-auto flex items-center gap-4 pt-4 border-t border-white/5">
+              <div className="w-10 h-10 rounded-full bg-gradient-to-br from-slate-700 to-black border border-white/10 flex items-center justify-center font-bold text-xs text-white">{t.name.charAt(0)}</div>
+              <div>
+                <p className="text-white font-black uppercase text-xs tracking-wider">{t.name}</p>
+                <p className="text-red-500 text-[9px] font-bold uppercase tracking-widest">{t.role}</p>
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  </section>
 ));
 
 const CollaborationForm = memo(({ onClose, playSound }) => {
@@ -262,33 +276,53 @@ const Modal = memo(({ isOpen, onClose, children }) => {
   );
 });
 
-const Navbar = memo(({ scrolled, view, navigateTo, openChat }) => (
-  <nav className={`fixed top-0 w-full z-[100] transition-all duration-700 font-black ${(scrolled || view === 'play') ? 'bg-black/95 backdrop-blur-md border-b border-white/10 py-4 shadow-2xl' : 'bg-transparent py-6 md:py-10'}`}>
-    <div className="max-w-7xl mx-auto px-6 md:px-10 flex justify-between items-center">
-      <div onClick={() => { navigateTo('home'); window.scrollTo({ top: 0, behavior: 'instant' }); }} className="group cursor-pointer flex items-center gap-4 md:gap-6 active:scale-90 transition-all duration-500">
-        <div className="relative">
-          <div className="absolute inset-0 bg-red-600 blur-xl opacity-0 group-hover:opacity-40 transition-opacity" />
-          <div className="w-12 h-12 md:w-16 md:h-16 bg-gradient-to-tr from-red-600 via-red-500 to-orange-500 rounded-2xl md:rounded-3xl flex items-center justify-center text-white shadow-xl group-hover:rotate-12 transition-transform duration-500 text-xl md:text-2xl font-black relative z-10">LL</div>
-          <div className="absolute -top-1 -right-1 w-4 h-4 md:w-5 md:h-5 bg-emerald-500 border-[3px] border-black rounded-full shadow-glow-emerald z-20"></div>
+const Navbar = memo(({ scrolled, view, navigateTo, openChat }) => {
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+
+  return (
+    <nav className={`fixed top-0 w-full z-[100] transition-all duration-700 font-black ${(scrolled || view === 'play') ? 'bg-black/95 backdrop-blur-md border-b border-white/10 py-4 shadow-2xl' : 'bg-transparent py-6 md:py-10'}`}>
+      <div className="max-w-7xl mx-auto px-6 md:px-10 flex justify-between items-center relative">
+        <div onClick={() => { navigateTo('home'); window.scrollTo({ top: 0, behavior: 'instant' }); }} className="group cursor-pointer flex items-center gap-4 md:gap-6 active:scale-90 transition-all duration-500 z-50">
+          <div className="relative">
+            <div className="absolute inset-0 bg-red-600 blur-xl opacity-0 group-hover:opacity-40 transition-opacity" />
+            <div className="w-12 h-12 md:w-16 md:h-16 bg-gradient-to-tr from-red-600 via-red-500 to-orange-500 rounded-2xl md:rounded-3xl flex items-center justify-center text-white shadow-xl group-hover:rotate-12 transition-transform duration-500 text-xl md:text-2xl font-black relative z-10">LL</div>
+            <div className="absolute -top-1 -right-1 w-4 h-4 md:w-5 md:h-5 bg-emerald-500 border-[3px] border-black rounded-full shadow-glow-emerald z-20"></div>
+          </div>
+          <div className="flex flex-col leading-tight font-black pt-1">
+            <span className="text-white font-black text-xl md:text-2xl uppercase tracking-tighter group-hover:text-red-500 transition-colors duration-500 text-left">Lucien Lukes</span>
+            <span className="text-[9px] md:text-[10px] text-slate-500 font-black tracking-[0.4em] md:tracking-[0.6em] uppercase italic group-hover:text-white transition-colors duration-700">Growth Architect</span>
+          </div>
         </div>
-        <div className="flex flex-col leading-tight font-black pt-1">
-          <span className="text-white font-black text-xl md:text-2xl uppercase tracking-tighter group-hover:text-red-500 transition-colors duration-500 text-left">Lucien Lukes</span>
-          <span className="text-[9px] md:text-[10px] text-slate-500 font-black tracking-[0.4em] md:tracking-[0.6em] uppercase italic group-hover:text-white transition-colors duration-700">Growth Architect</span>
+
+        {/* Mobile Menu Toggle */}
+        <button className="md:hidden text-white z-50 p-2" onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}>
+          {isMobileMenuOpen ? <X size={28} /> : <Menu size={28} />}
+        </button>
+
+        {/* Mobile Menu Overlay */}
+        {isMobileMenuOpen && (
+          <div className="fixed inset-0 bg-black/98 z-40 flex flex-col items-center justify-center space-y-8 animate-reveal">
+             <button onClick={() => { navigateTo('home'); setIsMobileMenuOpen(false); }} className={`text-2xl font-black uppercase tracking-[0.2em] ${view === 'home' ? 'text-red-500' : 'text-white'}`}>Expertise</button>
+             <button onClick={() => { navigateTo('bio'); setIsMobileMenuOpen(false); }} className={`text-2xl font-black uppercase tracking-[0.2em] ${view === 'bio' ? 'text-red-500' : 'text-white'}`}>Bio</button>
+             <button onClick={() => { navigateTo('play'); setIsMobileMenuOpen(false); }} className={`text-2xl font-black uppercase tracking-[0.2em] ${view === 'play' ? 'text-red-500' : 'text-white'}`}>Growth Lab</button>
+             <button onClick={() => { openChat(); setIsMobileMenuOpen(false); }} className="bg-white text-black px-10 py-4 rounded-[2rem] font-black uppercase tracking-[0.2em]">Collaborer</button>
+          </div>
+        )}
+
+        {/* Desktop Menu */}
+        <div className="hidden md:flex items-center gap-16 text-[12px] font-black uppercase tracking-[0.4em]">
+          <button onClick={() => navigateTo('home')} className={`transition-all duration-500 hover:text-white relative group ${view === 'home' ? 'text-white' : 'text-slate-500'}`}>Expertise</button>
+          <button onClick={() => navigateTo('bio')} className={`transition-all duration-500 hover:text-white relative group ${view === 'bio' ? 'text-white' : 'text-slate-500'}`}>Bio</button>
+          <button onClick={() => navigateTo('play')} className={`flex items-center gap-3 transition-all duration-500 hover:text-red-500 group ${view === 'play' ? 'text-red-500' : 'text-slate-500'}`}><Gamepad2 size={18} /> Growth Lab</button>
+          <button onClick={openChat} className="bg-white text-black px-12 py-5 rounded-[2rem] font-black hover:bg-red-600 hover:text-white transition-all shadow-2xl active:scale-95 tracking-[0.2em] font-black uppercase border-2 border-transparent">Collaborer</button>
         </div>
       </div>
-      <div className="hidden md:flex items-center gap-16 text-[12px] font-black uppercase tracking-[0.4em]">
-        <button onClick={() => navigateTo('home')} className={`transition-all duration-500 hover:text-white relative group ${view === 'home' ? 'text-white' : 'text-slate-500'}`}>Expertise</button>
-        <button onClick={() => navigateTo('bio')} className={`transition-all duration-500 hover:text-white relative group ${view === 'bio' ? 'text-white' : 'text-slate-500'}`}>Bio</button>
-        <button onClick={() => navigateTo('play')} className={`flex items-center gap-3 transition-all duration-500 hover:text-red-500 group ${view === 'play' ? 'text-red-500' : 'text-slate-500'}`}><Gamepad2 size={18} /> Growth Lab</button>
-        <button onClick={openChat} className="bg-white text-black px-12 py-5 rounded-[2rem] font-black hover:bg-red-600 hover:text-white transition-all shadow-2xl active:scale-95 tracking-[0.2em] font-black uppercase border-2 border-transparent">Collaborer</button>
-      </div>
-    </div>
-  </nav>
-));
+    </nav>
+  );
+});
 
 const HeroSection = memo(({ openChat, playSound, profileImageUrl }) => (
   <section id="hero" className="relative pt-32 md:pt-72 pb-16 md:pb-32 px-6 overflow-hidden font-black">
-    {/* Correction : Fond gradué pour éviter le passage brutal au noir */}
     <div className="absolute top-0 left-0 w-full h-full bg-gradient-to-b from-red-900/10 via-transparent to-[#020202] -z-10" />
     <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full h-[800px] md:h-[1200px] bg-[radial-gradient(circle_at_50%_0%,rgba(220,38,38,0.15)_0%,transparent_70%)] -z-10" />
     <div className="absolute bottom-0 left-0 w-full h-40 bg-gradient-to-t from-[#020202] to-transparent -z-10" />
@@ -454,7 +488,6 @@ const SectionBio = memo(({ profileImageUrl, navigateTo, copyDiscord, copyFeedbac
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 animate-fade-in-up delay-200">
         <div className="lg:col-span-4 space-y-8">
           <div className="relative rounded-[2.5rem] md:rounded-[3rem] overflow-hidden border border-white/10 aspect-[3/4] group shadow-2xl">
-            {/* Correction : Ajout d'une animation fun mais discrète (shimmer scan) */}
             <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent -translate-x-full group-hover:animate-shimmer-fast z-30" />
             <div className="absolute inset-0 bg-gradient-to-t from-red-900/40 via-transparent to-transparent z-10 opacity-60"></div>
             <img src={profileImageUrl} alt="Consultant influence marketing & Freelance marketing France" className="w-full h-full object-cover object-top transition-transform duration-700 group-hover:scale-105" />
@@ -492,7 +525,6 @@ const SectionBio = memo(({ profileImageUrl, navigateTo, copyDiscord, copyFeedbac
                 Moi c'est <span className="text-transparent bg-clip-text bg-gradient-to-r from-red-500 to-white">
                   <span onClick={() => onSpell('alohomora')} className="cursor-pointer hover:text-red-400 transition-colors">Lucien.</span>
                 </span>
-                {/* MODIFICATION ICI : AJOUT DE L'EMOJI ANIMÉ */}
                 <span className="animate-wave inline-block origin-[70%_70%]">👋</span>
               </h3>
               <div className="flex items-center gap-4">
@@ -790,40 +822,6 @@ const GrowthLabGameComp = memo(({ navigateTo, playSound, profileImageUrl, openCh
               </div>
             </div>
 
-            <div className="max-w-4xl mx-auto mt-12 md:mt-20 p-6 md:p-10 bg-white/5 border border-white/10 rounded-[2rem] md:rounded-[3rem] animate-reveal">
-                <div className="space-y-6 md:space-y-8">
-                    <div className="flex items-center gap-4">
-                        <Brain className="text-red-500" size={32} />
-                        <h4 className="text-white font-black uppercase text-xl md:text-2xl tracking-tighter italic">La logique derrière ce jeu</h4>
-                    </div>
-                    
-                    <p className="text-slate-400 text-base md:text-lg font-medium">
-                        Ce mini-jeu n'est pas qu'un simple divertissement, c'est une <span className="text-white font-bold italic">métaphore de mon métier.</span>
-                    </p>
-
-                    <ul className="space-y-4 md:space-y-6 text-slate-400 text-sm md:text-base">
-                        <li className="flex gap-4 items-start">
-                            <span className="w-1.5 h-1.5 rounded-full bg-slate-600 mt-2.5 flex-shrink-0" />
-                            <p><span className="text-white font-bold">Le Timer (Stress) :</span> En start-up ou lancement de produit, le temps est l'ennemi. Il faut exécuter vite.</p>
-                        </li>
-                        <li className="flex gap-4 items-start">
-                            <span className="w-1.5 h-1.5 rounded-full bg-slate-600 mt-2.5 flex-shrink-0" />
-                            <p><span className="text-white font-bold">Les Cibles (Opportunités) :</span> Elles bougent vite. Il faut savoir différencier un <span className="italic">Lead Qualifié (Bleu)</span> d'un <span className="italic">Bad Buzz (Feu)</span> ou d'un <span className="italic">Bot (Rouge).</span></p>
-                        </li>
-                        <li className="flex gap-4 items-start">
-                            <span className="w-1.5 h-1.5 rounded-full bg-slate-600 mt-2.5 flex-shrink-0" />
-                            <p><span className="text-white font-bold">Le Multiplicateur (Hype) :</span> C'est la viralité. Quand on touche le bon levier (<span className="italic">"Golden Rocket"</span>), les résultats ne sont pas linéaires, ils sont exponentiels.</p>
-                        </li>
-                    </ul>
-
-                    <div className="pt-6 md:pt-8 border-t border-white/5">
-                        <p className="text-slate-400 text-sm md:text-base">
-                            <span className="text-red-500 font-black uppercase tracking-wider">Mon rôle :</span> Je suis celui qui vous aide à viser juste, éviter les pièges (bots/bad buzz) et déclencher ce fameux multiplicateur de croissance.
-                        </p>
-                    </div>
-                </div>
-            </div>
-
             <div className="flex justify-center pt-8">
                 <button onClick={() => navigateTo('home')} className="flex items-center gap-6 text-slate-500 hover:text-white font-black uppercase text-[10px] tracking-[0.8em] transition-all group active:scale-95"><ArrowRight className="rotate-180 group-hover:-translate-x-4 transition-transform duration-500" size={20} /> Retour</button>
             </div>
@@ -886,7 +884,7 @@ const App = () => {
     let spellData = { type: spellType, text: '' };
     if (spellType === 'lumos') {
       playSound(1200, 'sine', 0.5);
-      spellData.text = "Création et pilotage intégral du serveur Minecraft RPG Harry Potter n°1 en France.";
+      spellData.text = "J'ai fondé PoudlardRP très jeune, sans expérience et mon jeu fait avec passion s'est retrouvé sur le devant de la scène sur un live de 30 000 personnes juste avec une campagne de mailing. Une preuve vivante que la stratégie bat le budget.";
     } else if (spellType === 'alohomora') {
       playSound(800, 'triangle', 0.5);
       spellData.text = "J'ai passé mon bac en candidat libre après avoir arrêté les cours et j'ai finis par un master en marketing digital.";
@@ -958,9 +956,9 @@ const App = () => {
               {activeSpell.type === 'lumos' ? 'Lumos Maxima' : activeSpell.type === 'alohomora' ? 'Alohomora' : 'Wingardium Leviosa'}
             </h2>
             <p className={`${activeSpell.type === 'lumos' ? 'text-white' : activeSpell.type === 'alohomora' ? 'text-amber-500' : 'text-purple-500'} font-black uppercase tracking-[0.5em] text-xs mb-8`}>✨ Easter Egg Découvert ✨</p>
-            <div className="max-w-2xl bg-white/5 border border-white/10 p-8 rounded-[2rem] backdrop-blur-md relative overflow-hidden">
+            <div className="max-w-2xl bg-white/5 border border-white/10 p-8 rounded-[2rem] relative overflow-hidden">
                 <div className={`absolute top-0 left-0 w-1 h-full bg-gradient-to-b ${activeSpell.type === 'lumos' ? 'from-white via-slate-400 to-slate-600' : activeSpell.type === 'alohomora' ? 'from-amber-400 via-orange-500 to-red-600' : 'from-purple-400 via-indigo-500 to-blue-600'}`} />
-                <p className="text-slate-300 text-lg md:text-xl font-medium leading-relaxed italic">
+                <p className="text-white text-lg md:text-xl font-medium leading-relaxed italic">
                   "{activeSpell.text}"
                 </p>
             </div>
@@ -981,27 +979,7 @@ const App = () => {
           <>
             <HeroSection openChat={() => setIsChatOpen(true)} playSound={playSound} profileImageUrl={profileImageUrl} />
             <TrustStrip />
-            <div className="flex justify-center pb-10 -mt-4 relative z-20">
-               <ChevronDown className="text-slate-500 animate-bounce" size={32} />
-            </div>
-            <section className="py-20 md:py-40 px-6 font-black relative overflow-hidden">
-              <div className="max-w-7xl mx-auto grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 md:gap-12 text-center">
-                {STATS_DATA.map((stat) => (
-                  <div key={stat.id} onClick={() => openModal('stat', stat)} className={`relative group cursor-pointer h-72 md:h-80 bg-slate-900/40 border border-white/5 rounded-[3rem] md:rounded-[4rem] flex flex-col items-center justify-center p-8 md:p-12 transition-all hover:border-red-500/50 hover:-translate-y-4 active:scale-95 will-change-transform shadow-2xl`}>
-                    <div className="relative z-10 space-y-4 md:space-y-6">
-                      <div className="p-5 md:p-6 bg-black rounded-3xl w-fit mx-auto group-hover:scale-110 transition-transform">
-                        {React.createElement(stat.icon, { size: 28, className: "text-red-500 md:w-8 md:h-8" })}
-                      </div>
-                      <div className="space-y-1">
-                        <div className="text-5xl md:text-6xl font-black text-white tracking-tighter leading-none group-hover:scale-105 transition-transform">{stat.value}</div>
-                        <div className="text-[9px] md:text-[10px] font-black text-slate-500 uppercase tracking-[0.4em] mt-2 md:mt-3 group-hover:text-red-400 transition-colors leading-none">{stat.label}</div>
-                      </div>
-                      <div className="px-4 py-2 md:px-5 bg-white/5 rounded-full text-[9px] md:text-[10px] font-black text-white uppercase tracking-widest border border-white/5 backdrop-blur-md group-hover:bg-white/10 transition-all">{stat.subtext}</div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </section>
+            {/* Removed STATS_DATA cards section as requested */}
 
             <section className="py-24 md:py-48 px-6 text-left">
               <div className="max-w-7xl mx-auto space-y-16 md:space-y-32">
@@ -1035,6 +1013,8 @@ const App = () => {
                </div>
             </section>
 
+            <TestimonialsSection />
+
             <footer className="py-24 md:py-40 px-6 border-t border-white/5 bg-black text-center font-black relative overflow-hidden">
               <div className="max-w-4xl mx-auto space-y-12 md:space-y-20">
                 <h4 className="text-4xl md:text-5xl lg:text-7xl text-white font-black uppercase tracking-tighter italic leading-none">Freelance Marketing France.</h4>
@@ -1062,51 +1042,26 @@ const App = () => {
       </main>
 
       <Modal isOpen={!!modalType} onClose={closeModal}>
-        {modalType === 'stat' && selectedData && (
-          <div className="text-center space-y-8 md:space-y-10 animate-reveal">
-            <div className="p-6 md:p-8 bg-red-600 rounded-[2rem] md:rounded-[2.5rem] text-white w-fit mx-auto shadow-glow-red animate-float">
-                {React.createElement(selectedData.icon, { size: 36, className: "md:w-11 md:h-11" })}
-            </div>
-            <div>
-              <h3 className="text-5xl md:text-6xl lg:text-7xl font-black text-white tracking-tighter leading-none">{selectedData.value}</h3>
-              <p className="text-red-500 font-black uppercase text-[10px] md:text-[11px] tracking-[0.8em] mt-3 md:mt-4">{selectedData.label}</p>
-            </div>
-            <div className="space-y-8 md:space-y-10 text-left">
-              <p className="italic font-light text-lg md:text-xl lg:text-2xl text-slate-200">"{selectedData.detail}"</p>
-              <div className="grid grid-cols-1 gap-4 md:gap-5 pt-6 md:pt-8 border-t border-white/10">
-                {selectedData.metrics?.map(m => (
-                  <div key={m} className="flex items-center gap-4 md:gap-5 text-xs md:text-sm font-black uppercase text-white/80 font-black"><CheckCircle className="text-emerald-500" size={20} /> {m}</div>
-                ))}
-              </div>
-              {selectedData.testimonials && (
-                <div className="space-y-5 md:space-y-6 pt-8 md:pt-10 border-t border-white/10">
-                  <h4 className="text-white font-black uppercase text-[10px] md:text-[11px] tracking-[0.5em] flex items-center gap-4 md:gap-5"><Quote size={18} className="text-red-600 md:w-5 md:h-5" /> Success Stories</h4>
-                  <div className="space-y-5 md:space-y-6">
-                    {selectedData.testimonials.map((t, idx) => (
-                        <div key={idx} className="bg-white/5 p-6 md:p-8 rounded-[2.5rem] md:rounded-[3rem] border border-white/5">
-                            <p className="text-slate-300 italic mb-5 md:mb-6 font-light text-sm md:text-base">"{t.text}"</p>
-                            <div className="flex items-center gap-4"><div className="w-2.5 h-2.5 md:w-3 md:h-3 rounded-full bg-red-600" /><p className="text-red-500 text-[10px] md:text-xs font-black uppercase tracking-[0.2em]">{t.author}</p></div>
-                        </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-            </div>
-          </div>
-        )}
         {modalType === 'skill' && selectedData && (
           <div className="animate-reveal">
             <div className="flex items-center gap-8 md:gap-10 mb-10 md:mb-14 flex-col md:flex-row text-center md:text-left">
               <div className="p-8 md:p-10 bg-red-600 rounded-[2.5rem] md:rounded-[3rem] text-white shadow-glow-red">
                 {React.createElement(selectedData.icon, { size: 40, className: "md:w-12 md:h-12" })}
               </div>
-              <h3 className="text-2xl sm:text-3xl md:text-5xl lg:text-6xl font-black text-white uppercase tracking-tighter leading-[0.9] md:leading-[0.8] break-words">{selectedData.name}</h3>
+              <h3 className="text-2xl sm:text-3xl md:text-5xl lg:text-6xl font-black text-white uppercase tracking-tighter leading-[0.9] md:leading-[0.8] break-words hyphens-auto">{selectedData.name}</h3>
             </div>
             <div className="space-y-10 md:space-y-12">
               <div className="p-8 md:p-10 bg-white/[0.03] rounded-[2.5rem] md:rounded-[3.5rem] border-l-4 md:border-l-8 border-red-600 text-left">
                   <p className="text-red-500 font-black uppercase text-[10px] md:text-[11px] tracking-[0.4em] mb-3 md:mb-4">Concept stratégique</p>
                   <p className="text-xl md:text-2xl lg:text-3xl text-slate-100 font-light italic leading-tight">"{selectedData.simple}"</p>
               </div>
+              
+              {selectedData.extraInfo && (
+                <div className="p-6 bg-blue-900/20 border border-blue-500/20 rounded-[2rem] text-center">
+                    <p className="text-blue-400 font-bold uppercase text-xs tracking-widest">{selectedData.extraInfo}</p>
+                </div>
+              )}
+
               <div className="space-y-6 md:space-y-8 px-2 md:px-4 text-left font-black">
                   <p className="text-[10px] md:text-[11px] font-black uppercase text-slate-500 tracking-[0.5em]">Opérations clés</p>
                   <div className="grid grid-cols-1 gap-5 md:gap-6">
