@@ -1,0 +1,11 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Optionnel: reset minimal pour ton layout full-screen */
+html, body, #root {
+  height: 100%;
+}
+body {
+  margin: 0;
+}
