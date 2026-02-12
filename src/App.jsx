@@ -120,10 +120,10 @@ const GLOBAL_STYLES = `
     will-change: transform;
   }
 
-  .content-auto {
-    content-visibility: auto;
-    contain-intrinsic-size: auto 500px;
-  }
+  /* Scrollbar globale stylisée */
+  ::-webkit-scrollbar { width: 5px; }
+  ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 10px; }
+  ::-webkit-scrollbar-thumb:hover { background: #dc2626; }
 
   @keyframes float { 
     0%, 100% { transform: translate3d(0, 0, 0); } 
@@ -131,7 +131,7 @@ const GLOBAL_STYLES = `
   }
   
   .animate-reveal, .animate-fade-in-up, .animate-slide-in-right {
-    contain: layout style paint;
+    /* Suppression du contain pour éviter le double scroll */
     animation-fill-mode: forwards;
   }
 
@@ -351,151 +351,6 @@ const TEXTS = {
       task_words: "Trouver les 3 mots cachés",
       task_score: "Faire +150k pts au Growth Lab"
     }
-  },
-  en: {
-    nav: { expertise: "Expertise", bio: "Bio", lab: "Growth Lab", collab: "Collaborate" },
-    hero: {
-      badge: "Marketing Expert & Digital Projects",
-      title1: "Drive",
-      title2: "Growth.",
-      sub: "Got a project in mind? Need visibility, users, or growth? I guide you from strategy to execution.",
-      btn_work: "Work Together",
-      btn_cv: "My Resume (PDF)",
-      exp: "Experience",
-      proj: "Projects",
-      success: "100% Success",
-      avail: "Available",
-      loc: "Montpellier / Remote"
-    },
-    trust: { sat: "100% Satisfaction", proj: "+50 Projects", int: "International", conf: "Confidentiality" },
-    stack: {
-      title_sub: "Methodology",
-      title: "Playbook.",
-      desc: "Marketing Consultant - 360° Acquisition Strategies.",
-      top: "Top Demand",
-      new: "NEW"
-    },
-    exp: {
-      roadmap: "Roadmap",
-      title: "Pro Experience.",
-      impact: "Direct Impact",
-      details_prefix: "Details"
-    },
-    cursus: {
-      sub: "Academic Foundation",
-      title: "Foundations.",
-      dc: { title: "Digital Campus", sub: "Master Digital Strategy Expert" },
-      iscom: { title: "ISCOM", sub: "Bachelor Communication & Ads" }
-    },
-    testi: { sub: "Trust", title: "Pro Talk." },
-    footer: { btn: "Collaborate Now", copyright: "Developed by Lucien LUKES" },
-    bio: {
-      sub: "About",
-      title: "Bio.",
-      dl: "Download CV",
-      intro_1: "I am",
-      intro_2: "Lucien.",
-      job: "Growth Architect & Consultant Influence",
-      p1_bold: "I don't just 'do' digital.",
-      p1: "I help projects structure themselves, find their audience, and scale up.",
-      p2_bold: "gaming, tech, social platforms",
-      p2: "I come from a fast-paced world: ",
-      p2_end: ". Demanding environments with real audiences and concrete stakes. That's where I learned to grow projects—not in theory, but by testing, adjusting, and iterating.",
-      p3: "I've worked on products and initiatives capable of reaching hundreds of thousands, sometimes millions of users, blending strategy, content, and team management.",
-      adn: "Digital DNA",
-      sectors: "Sectors",
-      method: "Method",
-      target: "Target Role",
-      env: "Environment",
-      back: "Back to Expertise",
-      avail: "Available",
-      loc: "Montpellier / Remote",
-      hello: "Hey there! 👋",
-      radar_title: "HYBRID PROFILE",
-      stack_title: "Marketing Stack"
-    },
-    game: {
-      title: "Influence",
-      title_sub: "Rush.",
-      timer: "Timer",
-      eng: "ENGAGEMENT",
-      brief: "Mission Briefing",
-      brief_client: "Clients",
-      brief_viral: "Viralité",
-      brief_partner: "Partner",
-      brief_bots: "Bots",
-      brief_bad: "Bad Buzz",
-      brief_streak: "Streak",
-      btn_start: "Start Game",
-      score_title: "Scoreboard.",
-      record: "Engagement Record",
-      you: "You (Visitor)",
-      score: "Current Score",
-      taunt: "See, I'm better... So contact me! 😉",
-      retry: "Relancer",
-      contact: "Contact",
-      back: "Back",
-      logic_title: "THE LOGIC BEHIND THIS GAME",
-      logic_intro: "This mini-game isn't just entertainment, it's a metaphor for my work.",
-      logic_p1_title: "The Timer (Stress)",
-      logic_p1_desc: "In startups or product launches, time is the enemy. You must execute fast.",
-      logic_p2_title: "The Targets (Opportunities)",
-      logic_p2_desc: "They move fast. You must distinguish a Qualified Lead (Blue) d'un Bad Buzz (Fire) or a Bot (Red).",
-      logic_p3_title: "The Multiplier (Hype)",
-      logic_p3_desc: "This is virality. When you hit the right lever (Golden Rocket), results aren't linear, they are exponential.",
-      logic_conc_title: "My Role:",
-      logic_conc_desc: "I am the one helping you aim true, avoid traps, and trigger that famous growth multiplier."
-    },
-    form: {
-      title: "Collaborate.",
-      step1: "01. Contract Type",
-      free: "Freelance / Mission",
-      cdi: "Full-time / Long Term",
-      step2_title: "02. Scope of Work",
-      mc: "Minecraft Project?",
-      btn_cont: "Continue",
-      duration: "Estimated Duration",
-      loc: "Location",
-      sel_duration: "Select duration...",
-      d_one: "One-shot",
-      d_short: "1 - 3 Months",
-      d_mid: "3 - 6 Months",
-      d_long: "Long term (+6 months)",
-      l_rem: "Remote",
-      l_site: "On Site",
-      l_hyb: "Hybrid",
-      proj_label: "Your Project / Ambition",
-      proj_placeholder: "Describe your needs, current challenges...",
-      email_label: "Work Email",
-      btn_back: "Back",
-      btn_send: "Send Request",
-      success_title: "Received!",
-      success_msg: "I just received your brief. I'll analyze it and get back to you within 24h at",
-      close: "Close",
-      quest_bonus: "Mission Accomplie : -5% sur votre devis !",
-      certified_badge: "Expert Certifié"
-    },
-    modal: {
-      strat: "Concept stratégique",
-      ops: "Opérations clés",
-      btn: "Propulser ce levier"
-    },
-    toast: {
-      email_copied: "Email copié dans le presse-papier !",
-      discord_copied: "Discord copié !"
-    },
-    quest: {
-      title: "Quêtes secondaires",
-      instruction: "Complétez les objectifs ci-dessous pour débloquer -5% de réduction sur votre prochaine mission freelance.",
-      tip: "Indice : Cherchez des mots cachés dans le texte (cliquez dessus) et prouvez votre valeur au jeu.",
-      progress: "Avancement",
-      locked: "En cours...",
-      unlocked: "Badge Expert Débloqué",
-      congrats: "Mission Accomplie !",
-      benefit: "Récompense : -5% sur le devis",
-      task_words: "Trouver les 3 mots cachés",
-      task_score: "Faire +150k pts au Growth Lab"
-    }
   }
 };
 
@@ -585,7 +440,7 @@ const QuestTracker = memo(({ found, t }) => {
   const hasWord2 = found.includes('alohomora');
   const hasWord3 = found.includes('wingardium');
   const hasHighScore = found.includes('highscore');
-      
+       
   const wordCount = [hasWord1, hasWord2, hasWord3].filter(Boolean).length;
 
   useEffect(() => {
@@ -783,44 +638,9 @@ const TechStackTicker = memo(({t}) => {
     );
 });
 
-const ScrollProgress = memo(() => {
-  const barRef = useRef(null);
-
-  useEffect(() => {
-    let rafId;
-    const updateScroll = () => {
-        if (!barRef.current) return;
-        const totalHeight = document.documentElement.scrollHeight - window.innerHeight;
-        const progress = (window.scrollY / totalHeight);
-        barRef.current.style.transform = `scaleY(${progress})`;
-    };
-
-    const handleScroll = () => {
-        cancelAnimationFrame(rafId);
-        rafId = requestAnimationFrame(updateScroll);
-    };
-
-    window.addEventListener('scroll', handleScroll, { passive: true });
-    return () => {
-        window.removeEventListener('scroll', handleScroll);
-        cancelAnimationFrame(rafId);
-    };
-  }, []);
-
-  return (
-    <div className="fixed top-0 right-0 h-full w-1.5 bg-white/5 z-[90] hidden md:block pointer-events-none">
-      <div 
-        ref={barRef}
-        className="bg-red-600 w-full h-full origin-top will-change-transform"
-        style={{ transform: 'scaleY(0)' }}
-      />
-    </div>
-  );
-});
-
 const TrustStrip = memo(({ lang, t }) => (
   <>
-    <div className="py-6 md:py-10 border-y border-white/5 bg-white/[0.02] overflow-hidden backdrop-blur-sm relative z-30" style={{ contain: 'layout paint' }}>
+    <div className="py-6 md:py-10 border-y border-white/5 bg-white/[0.02] overflow-hidden backdrop-blur-sm relative z-30">
         <div className="max-w-7xl mx-auto px-6 flex flex-wrap justify-center lg:justify-between gap-4 md:gap-8 items-center text-slate-500 font-bold uppercase text-[9px] md:text-[10px] tracking-[0.2em]">
         <div className="flex items-center gap-2 md:gap-3"><ShieldCheck size={16} className="text-emerald-500" /> {t.sat}</div>
         <div className="flex items-center gap-2 md:gap-3"><Activity size={16} className="text-red-500" /> {t.proj}</div>
@@ -1075,7 +895,7 @@ const HeroSection = memo(({ openChat, playSound, profileImageUrl, t, handleDownl
     };
 
     return (
-      <section id="hero" className="relative pt-32 md:pt-72 pb-16 md:pb-32 px-6 overflow-x-hidden font-black">
+      <section id="hero" className="relative pt-40 md:pt-72 pb-24 md:pb-48 px-6 font-black">
         <div className="absolute top-0 left-0 w-full h-full bg-gradient-to-b from-red-900/10 via-transparent to-[#020202] -z-10" />
         <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full h-[800px] md:h-[1200px] bg-[radial-gradient(circle_at_50%_0%,rgba(220,38,38,0.15)_0%,transparent_70%)] -z-10" />
         <div className="absolute bottom-0 left-0 w-full h-40 bg-gradient-to-t from-[#020202] to-transparent -z-10" />
@@ -1138,6 +958,8 @@ const HeroSection = memo(({ openChat, playSound, profileImageUrl, t, handleDownl
 
           </div>
         </div>
+        
+        {/* Scroll indicator removed as requested */}
       </section>
     );
 });
@@ -1150,7 +972,7 @@ const Experiences = memo(({ experiences, onSpell, t }) => {
   useEffect(() => {
     let rafId;
     let containerRect = { top: 0, height: 0 };
-      
+       
     const updateMetrics = () => {
         if(containerRef.current) {
             const r = containerRef.current.getBoundingClientRect();
@@ -1193,7 +1015,7 @@ const Experiences = memo(({ experiences, onSpell, t }) => {
   }, []);
 
   return (
-    <section id="missions" ref={containerRef} className={`py-16 md:py-56 px-6 relative font-black ${isVisible ? 'opacity-100' : 'opacity-0'} transition-opacity duration-1000`} style={{ contain: 'layout paint' }}>
+    <section id="missions" ref={containerRef} className={`py-16 md:py-32 px-6 relative font-black ${isVisible ? 'opacity-100' : 'opacity-0'} transition-opacity duration-1000`} style={{ contain: 'layout paint' }}>
       <div className="absolute top-0 left-0 w-full h-full bg-gradient-to-b from-transparent via-red-600/5 to-transparent -z-10" />
       <div className="max-w-6xl mx-auto space-y-12 md:space-y-32">
         <div className="text-center space-y-6">
@@ -1922,7 +1744,7 @@ const MainContent = memo(({ view, profileImageUrl, t, experiences, stackData, te
             />
             <TrustStrip lang={'fr'} t={t.trust} />
             
-            <section className="py-24 md:py-48 px-6 text-left relative content-auto" style={{ contain: 'layout paint' }}>
+            <section className="py-12 md:py-24 px-6 text-left relative content-auto" style={{ contain: 'layout paint' }}>
               <div className="max-w-7xl mx-auto space-y-16 md:space-y-32">
                 <div className="flex flex-col md:flex-row justify-between items-end gap-6 md:gap-10">
                   <div className="space-y-3 md:space-y-4">
@@ -1943,9 +1765,7 @@ const MainContent = memo(({ view, profileImageUrl, t, experiences, stackData, te
                   ))}
                 </div>
               </div>
-              <div className="hidden lg:block absolute right-4 top-1/2 -translate-y-1/2 w-1 h-32 bg-white/5 rounded-full overflow-hidden">
-                  <div className="w-full h-1/2 bg-red-600 animate-pulse rounded-full"></div>
-              </div>
+              {/* Decorative bar removed as requested */}
             </section>
 
             <Experiences experiences={experiences} onSpell={triggerSpell} t={t.exp} />
@@ -2240,7 +2060,7 @@ const App = () => {
       </div>
 
       <Navbar scrolled={scrolled} view={view} navigateTo={navigateTo} openChat={openChat} lang={lang} setLang={setLang} t={t.nav} isMuted={isMuted} toggleMute={toggleMute} />
-      <ScrollProgress />
+      {/* ScrollProgress removed as requested */}
 
       <MainContent 
         view={view}
