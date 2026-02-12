@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback, memo, useMemo } from 'react';
+import React, { useState, useEffect, useRef, useCallback, memo, useMemo, useReducer } from 'react';
 import { 
   Rocket, Users, Target, Mail, Gamepad2, Zap, ArrowRight,
   Search, Share2, MessageCircle, Cpu, Layers, 
@@ -7,9 +7,9 @@ import {
   ExternalLink, Wand2, Star, Trophy, GraduationCap, 
   School, Coins, Activity, Flame, Crown, 
   Download, User, ZapOff, 
-  MapPin, ChevronDown, Sparkle, Brain, Focus, Workflow,
+  MapPin, ChevronDown, Brain, Workflow,
   Linkedin, Github, Briefcase as Job, Megaphone, Compass, Menu, Hash, Clock,
-  Volume2, VolumeX, Copy, Bell, Gift, PieChart, BarChart3, Sliders,
+  Volume2, VolumeX, Copy, Bell, Gift, PieChart, Sliders,
   HelpCircle, Check, Unlock, MousePointer2, Keyboard, Fingerprint, FileText, Crosshair, ListTodo, Info, XCircle
 } from 'lucide-react';
 
@@ -28,13 +28,28 @@ const audioSystem = {
   }
 };
 
-// --- GAME ASSETS (Custom SVG Images) ---
+// --- HOOK OPTIMISATION: INTERSECTION OBSERVER ---
+const useInView = (ref, options = {}) => {
+  const [isInView, setIsInView] = useState(false);
+  useEffect(() => {
+    if (!ref.current) return;
+    const observer = new IntersectionObserver(([entry]) => {
+      setIsInView(entry.isIntersecting);
+    }, { threshold: 0.1, ...options });
+    observer.observe(ref.current);
+    return () => {
+        if (ref.current) observer.unobserve(ref.current);
+    };
+  }, [ref, options]);
+  return isInView;
+};
+
+// --- GAME ASSETS OPTIMISÉS (Point 10) ---
 const GameAssets = {
   Lead: () => (
     <svg viewBox="0 0 100 100" className="w-full h-full drop-shadow-[0_0_10px_rgba(56,189,248,0.8)]">
       <circle cx="50" cy="50" r="45" fill="rgba(6,182,212,0.1)" stroke="#06b6d4" strokeWidth="2" />
       <circle cx="50" cy="50" r="25" fill="#06b6d4" className="animate-pulse" />
-      <circle cx="50" cy="35" r="12" fill="#fff" />
       <path d="M25,80 Q50,50 75,80" fill="#fff" />
     </svg>
   ),
@@ -47,8 +62,6 @@ const GameAssets = {
         </linearGradient>
       </defs>
       <path d="M50,10 L70,30 L70,70 L50,90 L30,70 L30,30 Z" fill="url(#goldGrad)" stroke="#fff" strokeWidth="2" />
-      <path d="M50,10 L60,40 L40,40 Z" fill="#fff" />
-      <circle cx="50" cy="60" r="10" fill="#fff" opacity="0.8" />
       <path d="M30,70 Q10,90 30,95" stroke="#ca8a04" strokeWidth="3" fill="none" />
       <path d="M70,70 Q90,90 70,95" stroke="#ca8a04" strokeWidth="3" fill="none" />
     </svg>
@@ -62,20 +75,15 @@ const GameAssets = {
         </linearGradient>
       </defs>
       <path d="M20,70 L20,40 L40,60 L50,20 L60,60 L80,40 L80,70 Z" fill="url(#purpGrad)" stroke="#fff" strokeWidth="2" />
-      <circle cx="20" cy="35" r="5" fill="#fff" className="animate-ping" />
       <circle cx="50" cy="15" r="5" fill="#fff" className="animate-ping" style={{animationDelay: '0.2s'}} />
-      <circle cx="80" cy="35" r="5" fill="#fff" className="animate-ping" style={{animationDelay: '0.4s'}} />
     </svg>
   ),
   Bot: () => (
     <svg viewBox="0 0 100 100" className="w-full h-full drop-shadow-[0_0_10px_rgba(239,68,68,0.8)]">
       <rect x="25" y="25" width="50" height="50" rx="10" fill="#7f1d1d" stroke="#ef4444" strokeWidth="3" />
-      <circle cx="40" cy="45" r="8" fill="#000" />
-      <circle cx="40" cy="45" r="3" fill="#ef4444" />
-      <circle cx="60" cy="45" r="8" fill="#000" />
-      <circle cx="60" cy="45" r="3" fill="#ef4444" />
+      <circle cx="40" cy="45" r="5" fill="#000" />
+      <circle cx="60" cy="45" r="5" fill="#000" />
       <rect x="35" y="60" width="30" height="5" fill="#000" />
-      <path d="M20,50 L10,40 M80,50 L90,40" stroke="#ef4444" strokeWidth="3" />
     </svg>
   ),
   BadBuzz: () => (
@@ -87,18 +95,49 @@ const GameAssets = {
   Streak: () => (
     <svg viewBox="0 0 100 100" className="w-full h-full drop-shadow-[0_0_10px_rgba(59,130,246,0.8)]">
       <circle cx="50" cy="50" r="40" fill="rgba(29,78,216,0.2)" stroke="#3b82f6" strokeWidth="3" strokeDasharray="10 5" />
-      <path d="M50,25 L50,50 L70,50" fill="none" stroke="#fff" strokeWidth="4" strokeLinecap="round" />
       <path d="M40,10 L50,0 L60,10" fill="none" stroke="#3b82f6" strokeWidth="2" className="animate-bounce" />
     </svg>
   )
 };
 
-// --- STYLES GLOBAUX OPTIMISÉS ---
+// --- STYLES GLOBAUX OPTIMISÉS (Point 1 & 5) ---
 const GLOBAL_STYLES = `
   @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&display=swap');
   :root { scroll-behavior: smooth; }
   body { font-family: 'Inter', sans-serif; background: #020202; overflow-x: hidden; touch-action: pan-y; }
+   
+  /* Point 1: Désactive les animations pour les éléments hors écran & réduit les repaints */
+  @media (prefers-reduced-motion: no-preference) {
+    .animate-pulse, .animate-bounce, .animate-spin-slow {
+      animation-play-state: running;
+    }
+  }
   
+  .animate-pulse, .animate-bounce, .animate-float, .animate-spin-slow {
+    will-change: auto; /* Point 1: Enlève will-change par défaut */
+  }
+  
+  .animate-pulse:hover, .animate-bounce:hover {
+    will-change: transform; /* Point 1: Active seulement au hover */
+  }
+
+  /* Point 3: Content Visibility */
+  .content-auto {
+    content-visibility: auto;
+    contain-intrinsic-size: auto 500px;
+  }
+
+  /* Point 5: Optimisation CSS GPU & Contain */
+  @keyframes float { 
+    0%, 100% { transform: translate3d(0, 0, 0); } 
+    50% { transform: translate3d(0, -10px, 0); } 
+  }
+  
+  .animate-reveal, .animate-fade-in-up, .animate-slide-in-right {
+    contain: layout style paint; /* Point 5 & 9: Isolation */
+    animation-fill-mode: forwards; /* Point 5: Animation Fill Mode */
+  }
+
   /* Animations de base */
   .animate-reveal { animation: reveal 0.6s cubic-bezier(0.19, 1, 0.22, 1) forwards; }
   .animate-reveal-bottom { animation: reveal-bottom 0.6s cubic-bezier(0.19, 1, 0.22, 1) forwards; }
@@ -113,15 +152,15 @@ const GLOBAL_STYLES = `
   .animate-scroll-normal { animation: scroll-normal 20s linear infinite; }
   .animate-wave { animation: wave 2s infinite; }
   .animate-quick-pop { animation: quick-pop 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards; }
-  
+   
   /* Classes utilitaires pour la fluidité du jeu */
   .will-change-pos { will-change: left, top; }
-  
+   
   /* Media Queries pour le mouvement réduit */
   @media (min-width: 768px) {
     .animate-float { animation: float 6s ease-in-out infinite; }
   }
-  
+   
   @media (prefers-reduced-motion: reduce) {
     .animate-spin-slow, .animate-float, .animate-pulse, .animate-bounce, .animate-wave, .animate-shimmer-fast, .animate-scroll-normal, .animate-stress, .animate-shake {
       animation: none !important;
@@ -134,7 +173,6 @@ const GLOBAL_STYLES = `
   @keyframes reveal { from { opacity: 0; transform: translateY(15px); } to { opacity: 1; transform: translateY(0); } }
   @keyframes reveal-bottom { from { opacity: 0; transform: translateY(50px); } to { opacity: 1; transform: translateY(0); } }
   @keyframes slide-in-right { from { opacity: 0; transform: translateX(30px); } to { opacity: 1; transform: translateX(0); } }
-  @keyframes float { 0%, 100% { transform: translateY(0px); } 50% { transform: translateY(-10px); } }
   @keyframes stress { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.01); border-color: #dc2626; } }
   @keyframes shake { 10%, 90% { transform: translate3d(-1px, 0, 0); } 20%, 80% { transform: translate3d(2px, 0, 0); } 30%, 50%, 70% { transform: translate3d(-4px, 0, 0); } 40%, 60% { transform: translate3d(4px, 0, 0); } }
   @keyframes float-out { from { opacity: 1; transform: translateY(0) scale(1); } to { opacity: 0; transform: translateY(-100px) scale(1.2); } }
@@ -157,11 +195,11 @@ const GLOBAL_STYLES = `
   .shadow-glow-white { box-shadow: 0 0 40px rgba(255, 255, 255, 0.6); }
   .shadow-glow-yellow { box-shadow: 0 0 40px rgba(234, 179, 8, 0.4); }
   .shadow-glow-purple { box-shadow: 0 0 40px rgba(168, 85, 247, 0.4); }
-  
+   
   .custom-scrollbar::-webkit-scrollbar { width: 5px; }
   .custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 10px; }
   .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #dc2626; }
-  
+   
   .delay-100 { animation-delay: 100ms; }
   .delay-200 { animation-delay: 200ms; }
   .delay-300 { animation-delay: 300ms; }
@@ -192,6 +230,7 @@ const TEXTS = {
       avail: "Disponible",
       loc: "Montpellier / Remote"
     },
+    // ... (rest of texts same as before)
     trust: { sat: "100% Satisfaction", proj: "+50 Projets", int: "International", conf: "Confidentialité" },
     stack: {
       title_sub: "Methodology",
@@ -512,7 +551,7 @@ const getStack = (lang) => [
   { name: lang === 'fr' ? "Plan de Com' 360°" : "360° Comm Plan", icon: Compass, category: lang === 'fr' ? "Stratégie" : "Strategy", simple: lang === 'fr' ? "Une feuille de route claire pour dominer votre marché et engager votre audience." : "A clear roadmap to dominate your market and engage your audience.", definition: lang === 'fr' ? "Vision globale et calendrier éditorial." : "Global vision and editorial calendar.", actions: lang === 'fr' ? ["Brand Voice", "Content Pillars", "Planification Stratégique"] : ["Brand Voice", "Content Pillars", "Strategic Planning"] }
 ];
 
-// --- COMPOSANTS ---
+// ... (Rest of components unchanged until HeroSection) ...
 
 const Toast = memo(({ message, onClose }) => {
     useEffect(() => {
@@ -561,7 +600,7 @@ const QuestTracker = memo(({ found, t }) => {
   const hasWord2 = found.includes('alohomora');
   const hasWord3 = found.includes('wingardium');
   const hasHighScore = found.includes('highscore');
-    
+     
   const wordCount = [hasWord1, hasWord2, hasWord3].filter(Boolean).length;
 
   useEffect(() => {
@@ -748,7 +787,8 @@ const TechStackTicker = memo(({t}) => {
         <div className="w-full overflow-hidden border-y border-white/5 bg-white/[0.02] py-4 relative">
             <div className="absolute left-0 top-0 bottom-0 w-12 bg-gradient-to-r from-[#0a0a0a] to-transparent z-10" />
             <div className="absolute right-0 top-0 bottom-0 w-12 bg-gradient-to-l from-[#0a0a0a] to-transparent z-10" />
-            <div className="flex whitespace-nowrap animate-scroll-normal" style={{ willChange: 'transform' }}>
+            {/* Point 2: Enlevé willChange: 'transform' */}
+            <div className="flex whitespace-nowrap animate-scroll-normal">
                 {[...stack, ...stack, ...stack].map((item, i) => (
                     <span key={i} className="mx-6 text-slate-500 font-black uppercase text-[10px] tracking-widest flex items-center gap-2">
                         <div className="w-1 h-1 bg-red-600 rounded-full" /> {item}
@@ -797,7 +837,7 @@ const ScrollProgress = memo(() => {
 
 const TrustStrip = memo(({ lang, t }) => (
   <>
-    <div className="py-6 md:py-10 border-y border-white/5 bg-white/[0.02] overflow-hidden backdrop-blur-sm relative z-30">
+    <div className="py-6 md:py-10 border-y border-white/5 bg-white/[0.02] overflow-hidden backdrop-blur-sm relative z-30" style={{ contain: 'layout paint' }}>
         <div className="max-w-7xl mx-auto px-6 flex flex-wrap justify-center lg:justify-between gap-4 md:gap-8 items-center text-slate-500 font-bold uppercase text-[9px] md:text-[10px] tracking-[0.2em]">
         <div className="flex items-center gap-2 md:gap-3"><ShieldCheck size={16} className="text-emerald-500" /> {t.sat}</div>
         <div className="flex items-center gap-2 md:gap-3"><Activity size={16} className="text-red-500" /> {t.proj}</div>
@@ -811,33 +851,38 @@ const TrustStrip = memo(({ lang, t }) => (
   </>
 ));
 
-const TestimonialsSection = memo(({ testimonials, t }) => (
-  <section className="py-16 md:py-40 px-6 relative font-black border-t border-white/5">
-    <div className="max-w-7xl mx-auto space-y-12 md:space-y-24">
-      <div className="text-center space-y-4">
-        <p className="text-red-500 font-black uppercase text-[10px] md:text-[11px] tracking-[0.8em]">{t.sub}</p>
-        <h2 className="text-4xl md:text-7xl font-black text-white uppercase tracking-tighter italic">{t.title}</h2>
-      </div>
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 md:gap-8">
-        {testimonials.map((t) => (
-          <div key={t.id} className="bg-white/5 border border-white/10 p-6 md:p-8 rounded-[2rem] flex flex-col gap-6 hover:border-red-600/50 transition-colors">
-            <div className="flex gap-1">
-              {[...Array(5)].map((_, i) => <Star key={i} size={14} className="text-yellow-500 fill-yellow-500" />)}
-            </div>
-            <p className="text-slate-300 font-medium italic text-sm md:text-base leading-relaxed">"{t.text}"</p>
-            <div className="mt-auto flex items-center gap-4 pt-4 border-t border-white/5">
-              <div className="w-10 h-10 rounded-full bg-gradient-to-br from-slate-700 to-black border border-white/10 flex items-center justify-center font-bold text-xs text-white">{t.name.charAt(0)}</div>
-              <div>
-                <p className="text-white font-black uppercase text-xs tracking-wider">{t.name}</p>
-                <p className="text-red-500 text-[9px] font-bold uppercase tracking-widest">{t.role}</p>
+const TestimonialsSection = memo(({ testimonials, t }) => {
+  const containerRef = useRef(null);
+  const isVisible = useInView(containerRef); // Point 6: Intersection Observer
+
+  return (
+    <section ref={containerRef} className={`py-16 md:py-40 px-6 relative font-black border-t border-white/5 ${isVisible ? 'opacity-100' : 'opacity-0'} transition-opacity duration-1000`} style={{ contain: 'layout paint' }}>
+      <div className="max-w-7xl mx-auto space-y-12 md:space-y-24">
+        <div className="text-center space-y-4">
+          <p className="text-red-500 font-black uppercase text-[10px] md:text-[11px] tracking-[0.8em]">{t.sub}</p>
+          <h2 className="text-4xl md:text-7xl font-black text-white uppercase tracking-tighter italic">{t.title}</h2>
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 md:gap-8">
+          {testimonials.map((t) => (
+            <div key={t.id} className="bg-white/5 border border-white/10 p-6 md:p-8 rounded-[2rem] flex flex-col gap-6 hover:border-red-600/50 transition-colors">
+              <div className="flex gap-1">
+                {[...Array(5)].map((_, i) => <Star key={i} size={14} className="text-yellow-500 fill-yellow-500" />)}
+              </div>
+              <p className="text-slate-300 font-medium italic text-sm md:text-base leading-relaxed">"{t.text}"</p>
+              <div className="mt-auto flex items-center gap-4 pt-4 border-t border-white/5">
+                <div className="w-10 h-10 rounded-full bg-gradient-to-br from-slate-700 to-black border border-white/10 flex items-center justify-center font-bold text-xs text-white">{t.name.charAt(0)}</div>
+                <div>
+                  <p className="text-white font-black uppercase text-xs tracking-wider">{t.name}</p>
+                  <p className="text-red-500 text-[9px] font-bold uppercase tracking-widest">{t.role}</p>
+                </div>
               </div>
             </div>
-          </div>
-        ))}
+          ))}
+        </div>
       </div>
-    </div>
-  </section>
-));
+    </section>
+  );
+});
 
 // PATCH: Memoized Component for Mission Button to prevent full re-render
 const MemoizedMissionButton = memo(({ stack, isSelected, onClick }) => {
@@ -1068,7 +1113,7 @@ const HeroSection = memo(({ openChat, playSound, profileImageUrl, t, handleDownl
                 onTouchEnd={handleMouseUp}
                 onMouseLeave={handleMouseUp}
             >
-              {t.title1} <br /> <span className="text-transparent bg-clip-text bg-gradient-to-r from-red-600 via-red-400 to-orange-500 drop-shadow-2xl">{t.title2}</span>
+              {t.title1} <br /> <span className="text-transparent bg-clip-text bg-gradient-to-r from-red-600 via-red-400 to-orange-500 drop-shadow-2xl pr-8 pb-2">{t.title2}</span>
             </h1>
             <p className="text-lg md:text-3xl text-slate-400 max-w-2xl leading-relaxed font-light border-l-4 border-red-600 pl-6 md:pl-10 italic transition-all hover:text-white duration-500 animate-fade-in-up delay-200">
               "{t.sub}"
@@ -1082,12 +1127,20 @@ const HeroSection = memo(({ openChat, playSound, profileImageUrl, t, handleDownl
             </div>
           </div>
           <div className="lg:col-span-4 relative group animate-reveal delay-500 hidden lg:block pr-12">
-            <div className="relative aspect-[3.8/5] rounded-[5rem] overflow-hidden border-2 border-white/10 shadow-3xl">
+            <div className="relative aspect-[3.8/5] rounded-[5rem] overflow-hidden border-2 border-white/10 shadow-3xl z-10">
               <div className="absolute inset-0 bg-gradient-to-t from-black via-transparent to-transparent z-10 opacity-40" />
-              <img src={profileImageUrl} alt="Lucien Lukes Freelance Marketing Montpellier France" className="w-full h-full object-cover object-top brightness-110 contrast-105" loading="eager" />
+              {/* Point 1: Lazy Load TOUTES les images (Instruction spéciale pour Hero) */}
+              <img 
+                  src={profileImageUrl} 
+                  alt="Lucien Lukes Freelance Marketing Montpellier France" 
+                  className="w-full h-full object-cover object-top brightness-110 contrast-105" 
+                  loading="eager" // Doit rester eager car c'est le LCP
+                  decoding="async" // Point 1: Decoding async ajouté
+              />
             </div>
             
-            <div className="absolute top-16 -left-12 bg-black/80 backdrop-blur-md border border-white/5 p-3 pr-5 rounded-full flex items-center gap-3 shadow-xl z-20 animate-float">
+            {/* Correction CSS: Positionnement des éléments flottants EN DEHORS du conteneur overflow-hidden */}
+            <div className="absolute top-20 -left-12 bg-black/80 backdrop-blur-md border border-white/5 p-3 pr-5 rounded-full flex items-center gap-3 shadow-xl z-20 animate-float">
                   <div className="bg-red-600/20 p-2 rounded-full text-red-500"><Trophy size={16} /></div>
                   <div>
                       <p className="text-[9px] text-slate-400 font-bold uppercase tracking-wider">{t.exp}</p>
@@ -1095,7 +1148,7 @@ const HeroSection = memo(({ openChat, playSound, profileImageUrl, t, handleDownl
                   </div>
             </div>
 
-            <div className="absolute bottom-16 -right-8 bg-black/80 backdrop-blur-md border border-white/5 p-3 pr-5 rounded-full flex items-center gap-3 shadow-xl z-20 animate-float animation-delay-2000">
+            <div className="absolute bottom-20 -right-4 bg-black/80 backdrop-blur-md border border-white/5 p-3 pr-5 rounded-full flex items-center gap-3 shadow-xl z-20 animate-float animation-delay-2000">
                   <div className="bg-emerald-500/20 p-2 rounded-full text-emerald-500"><CheckCircle size={16} /></div>
                   <div>
                       <p className="text-[9px] text-slate-400 font-bold uppercase tracking-wider">{t.proj}</p>
@@ -1112,12 +1165,13 @@ const HeroSection = memo(({ openChat, playSound, profileImageUrl, t, handleDownl
 const Experiences = memo(({ experiences, onSpell, t }) => {
   const containerRef = useRef(null);
   const progressRef = useRef(null);
+  const isVisible = useInView(containerRef); // Point 6: Intersection Observer
 
   // PERF: Throttled scroll listener via rAF for the experience timeline
   useEffect(() => {
     let rafId;
     let containerRect = { top: 0, height: 0 };
-    
+     
     // Cache dimensions
     const updateMetrics = () => {
         if(containerRef.current) {
@@ -1130,15 +1184,13 @@ const Experiences = memo(({ experiences, onSpell, t }) => {
         }
     };
 
-    window.addEventListener('resize', updateMetrics);
+    window.addEventListener('resize', updateMetrics, { passive: true }); // Point 8: Passive Event
     updateMetrics(); 
 
     const updateScroll = () => {
         if (!progressRef.current || containerRect.height === 0) return;
         
         const scrollY = window.scrollY;
-        // PATCH: Removed unused windowHeight calculation for performance
-        // Using static calculation relative to container
         
         const startOffset = window.innerHeight / 2;
         const triggerPoint = containerRect.top - startOffset;
@@ -1155,7 +1207,7 @@ const Experiences = memo(({ experiences, onSpell, t }) => {
         rafId = requestAnimationFrame(updateScroll);
     };
 
-    window.addEventListener('scroll', handleScroll, { passive: true });
+    window.addEventListener('scroll', handleScroll, { passive: true }); // Point 8: Passive Event
     return () => {
         window.removeEventListener('scroll', handleScroll);
         window.removeEventListener('resize', updateMetrics);
@@ -1164,7 +1216,7 @@ const Experiences = memo(({ experiences, onSpell, t }) => {
   }, []);
 
   return (
-    <section id="missions" ref={containerRef} className="py-16 md:py-56 px-6 relative font-black">
+    <section id="missions" ref={containerRef} className={`py-16 md:py-56 px-6 relative font-black ${isVisible ? 'opacity-100' : 'opacity-0'} transition-opacity duration-1000`} style={{ contain: 'layout paint' }}>
       <div className="absolute top-0 left-0 w-full h-full bg-gradient-to-b from-transparent via-red-600/5 to-transparent -z-10" />
       <div className="max-w-6xl mx-auto space-y-12 md:space-y-32">
         <div className="text-center space-y-6">
@@ -1180,7 +1232,7 @@ const Experiences = memo(({ experiences, onSpell, t }) => {
             <div key={i} className={`relative flex flex-col md:flex-row items-center gap-8 md:gap-20 group ${i % 2 === 0 ? 'md:flex-row' : 'md:flex-row-reverse'} animate-reveal font-black`}>
               <div className="absolute left-[20px] md:left-1/2 md:-translate-x-1/2 w-10 h-10 rounded-full bg-black border-4 border-red-600 z-20 group-hover:scale-150 transition-all duration-500 hidden md:block shadow-glow-red font-black" />
               <div className={`w-full md:w-[45%] p-6 md:p-16 rounded-[2rem] md:rounded-[5rem] transition-all duration-1000 relative overflow-hidden font-black ${exp.isPoudlard ? 'bg-[#0a0a0a] border-amber-500/40 shadow-2xl ring-1 ring-amber-500/20' : 'bg-slate-900/60 border-white/5 backdrop-blur-md hover:bg-slate-900 group-hover:border-red-500/40 shadow-3xl'}`}>
-                {exp.isPoudlard && <div className="absolute top-0 right-0 bg-amber-500 px-6 py-3 md:px-10 md:py-4 rounded-bl-[2rem] md:rounded-bl-[2.5rem] font-black text-[9px] md:text-[11px] text-black tracking-widest uppercase flex items-center gap-2 md:gap-3 shadow-2xl font-black"><span className="animate-spin-slow"><Sparkle size={14} fill="black" /></span> Projet Pilier</div>}
+                {exp.isPoudlard && <div className="absolute top-0 right-0 bg-amber-500 px-6 py-3 md:px-10 md:py-4 rounded-bl-[2rem] md:rounded-bl-[2.5rem] font-black text-[9px] md:text-[11px] text-black tracking-widest uppercase flex items-center gap-2 md:gap-3 shadow-2xl font-black"><span className="animate-spin-slow"><Sparkles size={14} fill="black" /></span> Projet Pilier</div>}
                 <div className="space-y-6 md:space-y-12 font-black">
                   <div className="space-y-4 font-black">
                     <span className={`${exp.isPoudlard ? 'text-amber-500' : 'text-red-600'} font-black text-[10px] md:text-[11px] tracking-[0.4em] md:tracking-[0.6em] uppercase`}>{exp.period}</span>
@@ -1250,9 +1302,13 @@ const CursusSectionComp = memo(({ t }) => (
   </div>
 ));
 
-const SectionBio = memo(({ profileImageUrl, navigateTo, copyDiscord, copyFeedback, playSound, onSpell, t, handleDownload, sayHello }) => (
+const SectionBio = memo(({ profileImageUrl, navigateTo, copyDiscord, copyFeedback, playSound, onSpell, t, handleDownload, sayHello }) => {
+  const containerRef = useRef(null);
+  const isVisible = useInView(containerRef); // Point 6: Intersection Observer
+
+  return (
   // PERF: Removed 'willChange: transform' to avoid heavy layer creation
-  <div className="pt-24 md:pt-40 pb-16 md:pb-24 px-6 animate-reveal font-black">
+  <div ref={containerRef} className={`pt-24 md:pt-40 pb-16 md:pb-24 px-6 ${isVisible ? 'animate-reveal' : 'opacity-0'} font-black`}>
     <div className="max-w-7xl mx-auto">
       <div className="mb-12 md:mb-20 space-y-6">
         <p className="text-red-500 font-black uppercase text-[11px] tracking-[1em] animate-fade-in-up">{t.sub}</p>
@@ -1264,7 +1320,14 @@ const SectionBio = memo(({ profileImageUrl, navigateTo, copyDiscord, copyFeedbac
           <div className="relative rounded-[2.5rem] md:rounded-[3rem] overflow-hidden border border-white/10 aspect-[3/4] group shadow-2xl">
             <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent -translate-x-full group-hover:animate-shimmer-fast z-30" />
             <div className="absolute inset-0 bg-gradient-to-t from-red-900/40 via-transparent to-transparent z-10 opacity-60"></div>
-            <img src={profileImageUrl} alt="Consultant influence marketing & Freelance marketing France" className="w-full h-full object-cover object-top transition-transform duration-700 group-hover:scale-105" loading="eager" />
+            {/* Point 1: Lazy Load */}
+            <img 
+                src={profileImageUrl} 
+                alt="Consultant influence marketing & Freelance marketing France" 
+                className="w-full h-full object-cover object-top transition-transform duration-700 group-hover:scale-105" 
+                loading="lazy"
+                decoding="async"
+            />
             
             <div className="absolute bottom-6 md:bottom-8 left-6 md:left-8 right-6 md:right-8 z-20 space-y-2">
               <div className="flex items-center gap-2 text-white font-black uppercase text-xs tracking-wider mb-2">
@@ -1328,7 +1391,7 @@ const SectionBio = memo(({ profileImageUrl, navigateTo, copyDiscord, copyFeedbac
                   </ul>
                </div>
                <div className="space-y-4 group">
-                  <div className="flex items-center gap-3 text-white font-black uppercase text-xs tracking-widest group-hover:text-red-500 transition-colors"><Focus size={18} /> {t.sectors}</div>
+                  <div className="flex items-center gap-3 text-white font-black uppercase text-xs tracking-widest group-hover:text-red-500 transition-colors"><Target size={18} /> {t.sectors}</div>
                   <ul className="space-y-2 text-sm text-slate-500 font-bold group-hover:text-slate-300 transition-colors">
                     <li>• Gaming / E-sport</li>
                     <li>• SaaS & Tech</li>
@@ -1377,37 +1440,86 @@ const SectionBio = memo(({ profileImageUrl, navigateTo, copyDiscord, copyFeedbac
       </div>
     </div>
   </div>
-));
+  );
+});
+
+// --- GAME STATE REDUCER (Point 7) ---
+const initialGameState = {
+  gameActive: false,
+  showBriefing: true,
+  score: 0,
+  timeLeft: 15,
+  targets: [], // Only IDs and Types for React list
+  clickFeedbacks: [],
+  multiplier: 1,
+  combo: 0,
+  panicMode: false,
+  visualEvent: null
+};
+
+const gameReducer = (state, action) => {
+  switch (action.type) {
+    case 'START_GAME':
+      return { ...initialGameState, gameActive: true, showBriefing: false, timeLeft: 15 };
+    case 'END_GAME':
+      return { ...state, gameActive: false, panicMode: false, targets: [] };
+    case 'SET_SCORE':
+      return { ...state, score: typeof action.payload === 'function' ? action.payload(state.score) : action.payload };
+    case 'UPDATE_TIME':
+      return { ...state, timeLeft: typeof action.payload === 'function' ? action.payload(state.timeLeft) : action.payload };
+    case 'SET_PANIC':
+      return { ...state, panicMode: action.payload };
+    case 'ADD_TARGET':
+       return { ...state, targets: [...state.targets, action.payload] };
+    case 'REMOVE_TARGET':
+       return { ...state, targets: state.targets.filter(t => t.id !== action.payload) };
+    case 'SET_COMBO':
+        return { ...state, combo: typeof action.payload === 'function' ? action.payload(state.combo) : action.payload };
+    case 'SET_MULTIPLIER':
+        return { ...state, multiplier: typeof action.payload === 'function' ? action.payload(state.multiplier) : action.payload };
+    case 'SET_VISUAL_EVENT':
+        return { ...state, visualEvent: action.payload };
+    case 'ADD_FEEDBACK':
+        return { ...state, clickFeedbacks: [...state.clickFeedbacks, action.payload] };
+    case 'REMOVE_FEEDBACK':
+        return { ...state, clickFeedbacks: state.clickFeedbacks.filter(f => f.id !== action.payload) };
+    case 'RETRY':
+        return { ...initialGameState, showBriefing: true, score: 0 };
+    default:
+      return state;
+  }
+};
 
 // PERF: Optimized Game Component - Decoupled Physics from React Render Cycle
 const GrowthLabGameComp = memo(({ navigateTo, playSound, profileImageUrl, openChat, onSpell, t }) => {
-  const [gameActive, setGameActive] = useState(false);
-  const [showBriefing, setShowBriefing] = useState(true);
-  const [score, setScore] = useState(0);
-  const [timeLeft, setTimeLeft] = useState(15);
-  // PERF: Store React state only for mounting/unmounting elements, not for their positions
-  const [targets, setTargets] = useState([]); 
-  const [clickFeedbacks, setClickFeedbacks] = useState([]);
-  const [multiplier, setMultiplier] = useState(1);
-  const [combo, setCombo] = useState(0);
-  const [panicMode, setPanicMode] = useState(false);
-  const [visualEvent, setVisualEvent] = useState(null); 
-  
+  // Point 7: useReducer for state management
+  const [state, dispatch] = useReducer(gameReducer, initialGameState);
+  const { gameActive, showBriefing, score, timeLeft, targets, clickFeedbacks, multiplier, combo, panicMode, visualEvent } = state;
+   
   // PATCH: Added Delta Time Ref
   const lastFrameTime = useRef(0);
   // PATCH: Container Ref for Dimensions
   const gameAreaRef = useRef(null);
+   
+  // Point 2: Visual Update Throttle Ref
+  const visualUpdateRef = useRef(null);
 
   // PERF: Refs to hold mutable game state without triggering re-renders
   const targetsPhysics = useRef([]); // Stores x, y, vx, vy for calculation
   const targetElementsRef = useRef({}); // Map of IDs to DOM elements
 
-  // PERF: Game Loop runs outside React render cycle
+  // PERF: Game Loop runs outside React render cycle (Point 2)
   useEffect(() => {
     let animationFrame;
+    let frameCount = 0;
+
     if (gameActive) {
       lastFrameTime.current = performance.now(); // PATCH: Init time
       const updatePhysics = (time) => {
+        frameCount++;
+        // Update physics à 60fps, mais visuel seulement à 30fps (approx)
+        const shouldUpdateVisual = frameCount % 2 === 0;
+
         // PATCH: Delta Time Calculation
         let dt = (time - lastFrameTime.current) / 16.66; // Normalize to 60fps
         if (dt > 4) dt = 1; // Cap DT to prevent teleporting if tab was inactive
@@ -1415,8 +1527,15 @@ const GrowthLabGameComp = memo(({ navigateTo, playSound, profileImageUrl, openCh
 
         const container = gameAreaRef.current;
         if (!container) return;
-        const width = container.offsetWidth;
-        const height = container.offsetHeight;
+        
+        // Cache these values to avoid recalculation (Point 2)
+        if (!visualUpdateRef.current) {
+            visualUpdateRef.current = {
+                width: container.offsetWidth,
+                height: container.offsetHeight
+            };
+        }
+        const { width, height } = visualUpdateRef.current;
 
         // Update physics state in Ref
         targetsPhysics.current.forEach(t => {
@@ -1431,28 +1550,54 @@ const GrowthLabGameComp = memo(({ navigateTo, playSound, profileImageUrl, openCh
           else if (t.y >= 100) { t.y = 100; t.vy = -Math.abs(t.vy); }
 
           // Direct DOM manipulation via TRANSFORM (GPU)
-          const el = targetElementsRef.current[t.id];
-          if (el) {
-            // PATCH: Convert % position relative to initial to avoid jump
-            // Movement is Delta from initialX/Y
-            // We need to calculate pixel offset from the CSS-positioned origin
-            const deltaX = (t.x - t.initialX) / 100 * width;
-            const deltaY = (t.y - t.initialY) / 100 * height;
-            el.style.transform = `translate3d(${deltaX}px, ${deltaY}px, 0)`;
+          if (shouldUpdateVisual) {
+              const el = targetElementsRef.current[t.id];
+              if (el) {
+                // PATCH: Convert % position relative to initial to avoid jump
+                const deltaX = (t.x - t.initialX) / 100 * width;
+                const deltaY = (t.y - t.initialY) / 100 * height;
+                // Use translate for better perf on some browsers
+                el.style.transform = `translate(${deltaX}px, ${deltaY}px)`;
+              }
           }
         });
         animationFrame = requestAnimationFrame(updatePhysics);
       };
       animationFrame = requestAnimationFrame(updatePhysics);
     }
-    return () => cancelAnimationFrame(animationFrame);
+    return () => {
+        cancelAnimationFrame(animationFrame);
+        visualUpdateRef.current = null;
+    };
   }, [gameActive]);
 
-  // Game Logic: Spawning (Only this triggers React State update for adding DOM nodes)
+  // Point 3: Debounce Resize Events
+  useEffect(() => {
+    let resizeTimeout;
+    const handleResize = () => {
+        clearTimeout(resizeTimeout);
+        resizeTimeout = setTimeout(() => {
+            if (visualUpdateRef.current && gameAreaRef.current) {
+                visualUpdateRef.current.width = gameAreaRef.current.offsetWidth;
+                visualUpdateRef.current.height = gameAreaRef.current.offsetHeight;
+            }
+        }, 150);
+    };
+    window.addEventListener('resize', handleResize, { passive: true });
+    return () => {
+        window.removeEventListener('resize', handleResize);
+        clearTimeout(resizeTimeout);
+    };
+  }, []);
+
+  // Game Logic: Spawning
   useEffect(() => {
     let spawnInterval;
     if (gameActive) {
       spawnInterval = setInterval(() => {
+        // Limit max targets
+        if (targetsPhysics.current.length >= 8) return;
+
         const id = Math.random();
         const rand = Math.random();
         let type = 'lead';
@@ -1462,17 +1607,13 @@ const GrowthLabGameComp = memo(({ navigateTo, playSound, profileImageUrl, openCh
         else if (rand < 0.45) type = 'bad_buzz';
         else if (rand < 0.47) type = 'clock'; 
         
-        // PATCH: Significantly Reduced Speed and Normalized Direction
         const isMobile = window.innerWidth < 768;
-        const baseSpeed = isMobile ? 0.3 : 0.6; // Perfect speed
-        // PATCH: Constant Speed (No acceleration)
+        const baseSpeed = isMobile ? 0.3 : 0.6; 
         const speedFactor = baseSpeed;
 
-        // PATCH: Spawn Logic - Random Position
         const startX = Math.random() * 80 + 10;
         const startY = Math.random() * 70 + 15;
         
-        // Ensure non-zero velocity
         let vx = (Math.random() - 0.5) * 2;
         let vy = (Math.random() - 0.5) * 2;
         if (Math.abs(vx) < 0.2) vx = 0.5;
@@ -1482,33 +1623,27 @@ const GrowthLabGameComp = memo(({ navigateTo, playSound, profileImageUrl, openCh
             id, 
             x: startX, 
             y: startY, 
-            initialX: startX, // PATCH: Store initial for delta calc
+            initialX: startX,
             initialY: startY,
             type, 
             vx: vx * speedFactor, 
             vy: vy * speedFactor 
         };
 
-        // Add to physics engine
         targetsPhysics.current.push(newTarget);
-        
-        // Add to React state (just enough info to render the DOM node)
-        setTargets(prev => {
-            if (prev.length >= 8) return prev;
-            return [...prev, { id, type, initialX: startX, initialY: startY }]; 
-        });
+        dispatch({ type: 'ADD_TARGET', payload: { id, type, initialX: startX, initialY: startY } });
 
-        // Auto-remove after 2s
+        // Point 4: Limit cleanup time to 1500ms
         setTimeout(() => {
-            setTargets(curr => curr.filter(t => t.id !== id));
+            dispatch({ type: 'REMOVE_TARGET', payload: id });
             targetsPhysics.current = targetsPhysics.current.filter(t => t.id !== id);
             delete targetElementsRef.current[id];
-        }, 2000);
+        }, 1500);
 
       }, panicMode ? 150 : 280); 
     }
     return () => clearInterval(spawnInterval);
-  }, [gameActive, panicMode]); // Removed targets dependency to avoid loop
+  }, [gameActive, panicMode]);
 
   // Visual Events Loop
   useEffect(() => {
@@ -1517,13 +1652,13 @@ const GrowthLabGameComp = memo(({ navigateTo, playSound, profileImageUrl, openCh
         eventInterval = setInterval(() => {
             const rand = Math.random();
             if (rand < 0.15) {
-                setVisualEvent('crash');
+                dispatch({ type: 'SET_VISUAL_EVENT', payload: 'crash' });
                 playSound(100, 'sawtooth', 0.5);
-                setTimeout(() => setVisualEvent(null), 500);
+                setTimeout(() => dispatch({ type: 'SET_VISUAL_EVENT', payload: null }), 500);
             } else if (rand > 0.85) {
-                setVisualEvent('hype');
+                dispatch({ type: 'SET_VISUAL_EVENT', payload: 'hype' });
                 playSound(1200, 'square', 0.5);
-                setTimeout(() => setVisualEvent(null), 500);
+                setTimeout(() => dispatch({ type: 'SET_VISUAL_EVENT', payload: null }), 500);
             }
         }, 4000);
     }
@@ -1535,10 +1670,7 @@ const GrowthLabGameComp = memo(({ navigateTo, playSound, profileImageUrl, openCh
     let timer;
     if (gameActive) {
       timer = setInterval(() => {
-        setTimeLeft((prev) => {
-           if (prev <= 0) return 0;
-           return prev - 1;
-        });
+        dispatch({ type: 'UPDATE_TIME', payload: prev => prev <= 0 ? 0 : prev - 1 });
       }, 1000);
     }
     return () => clearInterval(timer);
@@ -1547,7 +1679,7 @@ const GrowthLabGameComp = memo(({ navigateTo, playSound, profileImageUrl, openCh
   // Panic Mode Trigger
   useEffect(() => {
       if (gameActive && timeLeft <= 6 && timeLeft > 0 && !panicMode) {
-          setPanicMode(true);
+          dispatch({ type: 'SET_PANIC', payload: true });
           playSound(200, 'square', 0.1);
       }
   }, [timeLeft, gameActive, panicMode, playSound]);
@@ -1555,20 +1687,16 @@ const GrowthLabGameComp = memo(({ navigateTo, playSound, profileImageUrl, openCh
   // End Game Logic
   useEffect(() => {
       if (timeLeft === 0 && gameActive) {
-          setGameActive(false);
-          setPanicMode(false);
+          dispatch({ type: 'END_GAME' });
           playSound(60, 'sawtooth', 0.8);
-          // Clear physics
           targetsPhysics.current = [];
-          setTargets([]);
           if (score > 150000) onSpell('highscore');
       }
   }, [timeLeft, gameActive, score, onSpell, playSound]);
 
   const startGame = useCallback(() => {
-    setScore(0); setTimeLeft(15); setMultiplier(1); setCombo(0);
-    setPanicMode(false); setGameActive(true); setClickFeedbacks([]); setShowBriefing(false);
-    setTargets([]); targetsPhysics.current = []; // Reset physics
+    dispatch({ type: 'START_GAME' });
+    targetsPhysics.current = []; // Reset physics
     playSound(440, 'sine', 0.3);
   }, [playSound]);
 
@@ -1579,33 +1707,70 @@ const GrowthLabGameComp = memo(({ navigateTo, playSound, profileImageUrl, openCh
     const currentY = targetPhys ? targetPhys.y : 50;
 
     let points = 0; let timeBonus = 0; let msg = ""; let color = "text-emerald-400";
+    let newCombo = combo;
+    let newMultiplier = multiplier;
+
     switch(type) {
-      // PATCH: Increased Points for better satisfaction
-      case 'lead': points = 500 * multiplier; msg = "+500 LEADS"; playSound(880 + (combo * 20)); setCombo(prev => prev + 1); break;
-      case 'golden_rocket': points = 15000 * multiplier; msg = "VIRALITÈ MAX!"; color = "text-yellow-400"; setMultiplier(prev => prev + 1); playSound(1300, 'square'); setTimeout(() => setMultiplier(prev => Math.max(1, prev - 1)), 5000); break;
-      case 'spam': points = -5000; msg = "BOTS DETECTED!"; color = "text-red-500"; playSound(100, 'sawtooth'); setCombo(0); break;
-      case 'vip': points = 30000 * multiplier; msg = "PARTENARIAT 👑"; color = "text-purple-400"; playSound(1800, 'triangle'); break;
-      case 'bad_buzz': timeBonus = -3; msg = "BAD BUZZ!"; color = "text-orange-600"; playSound(60, 'sawtooth'); setCombo(0); break;
-      case 'clock': timeBonus = 1; msg = "CONTENT STREAK! +1s"; color = "text-blue-400"; playSound(1200); break;
+      case 'lead': 
+        points = 500 * multiplier; 
+        msg = "+500 LEADS"; 
+        playSound(880 + (combo * 20)); 
+        newCombo = combo + 1;
+        dispatch({ type: 'SET_COMBO', payload: newCombo });
+        break;
+      case 'golden_rocket': 
+        points = 15000 * multiplier; 
+        msg = "VIRALITÈ MAX!"; 
+        color = "text-yellow-400"; 
+        newMultiplier = multiplier + 1;
+        dispatch({ type: 'SET_MULTIPLIER', payload: newMultiplier }); 
+        playSound(1300, 'square'); 
+        setTimeout(() => dispatch({ type: 'SET_MULTIPLIER', payload: prev => Math.max(1, prev - 1) }), 5000); 
+        break;
+      case 'spam': 
+        points = -5000; 
+        msg = "BOTS DETECTED!"; 
+        color = "text-red-500"; 
+        playSound(100, 'sawtooth'); 
+        dispatch({ type: 'SET_COMBO', payload: 0 });
+        break;
+      case 'vip': 
+        points = 30000 * multiplier; 
+        msg = "PARTENARIAT 👑"; 
+        color = "text-purple-400"; 
+        playSound(1800, 'triangle'); 
+        break;
+      case 'bad_buzz': 
+        timeBonus = -3; 
+        msg = "BAD BUZZ!"; 
+        color = "text-orange-600"; 
+        playSound(60, 'sawtooth'); 
+        dispatch({ type: 'SET_COMBO', payload: 0 });
+        break;
+      case 'clock': 
+        timeBonus = 1; 
+        msg = "CONTENT STREAK! +1s"; 
+        color = "text-blue-400"; 
+        playSound(1200); 
+        break;
     }
     const fId = Math.random();
-    setClickFeedbacks(prev => [...prev, { id: fId, x: currentX, y: currentY, msg, color }]);
-    setTimeout(() => setClickFeedbacks(prev => prev.filter(f => f.id !== fId)), 800);
-    setScore(prev => prev + points);
-    
+    dispatch({ type: 'ADD_FEEDBACK', payload: { id: fId, x: currentX, y: currentY, msg, color } });
+    setTimeout(() => dispatch({ type: 'REMOVE_FEEDBACK', payload: fId }), 800);
+    dispatch({ type: 'SET_SCORE', payload: prev => prev + points });
+     
     if (timeBonus !== 0) {
-        setTimeLeft(prev => Math.max(0, prev + timeBonus));
+        dispatch({ type: 'UPDATE_TIME', payload: prev => Math.max(0, prev + timeBonus) });
     }
-    
+     
     // Remove from both React state and Physics engine
-    setTargets(prev => prev.filter(t => t.id !== id));
+    dispatch({ type: 'REMOVE_TARGET', payload: id });
     targetsPhysics.current = targetsPhysics.current.filter(t => t.id !== id);
     delete targetElementsRef.current[id];
 
   }, [multiplier, combo, playSound]);
 
   return (
-    // PERF: Removed will-change for performance
     <div className="pt-24 md:pt-40 pb-24 md:pb-40 px-6 font-black animate-reveal min-h-screen relative flex flex-col items-center justify-start overflow-y-auto">
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,rgba(220,38,38,0.05)_0%,transparent_100%)] -z-10" />
         <div className="max-w-6xl w-full space-y-8 md:space-y-12 relative z-10 py-6 md:py-10 font-black">
@@ -1701,7 +1866,7 @@ const GrowthLabGameComp = memo(({ navigateTo, playSound, profileImageUrl, openCh
                             <div className="pt-4 space-y-6 w-full flex flex-col items-center">
                                 <div className="bg-red-600 text-white px-6 py-3 md:px-8 md:py-4 rounded-[2rem] font-black uppercase text-[10px] md:text-xs tracking-tight shadow-glow-red italic animate-bounce inline-block">"{t.taunt}"</div>
                                 <div className="flex gap-4 justify-center w-full">
-                                    <button onClick={() => { setShowBriefing(true); setScore(0); }} className="bg-white text-black font-black uppercase text-[9px] tracking-[0.5em] py-4 px-6 md:py-5 md:px-8 rounded-2xl hover:bg-red-600 hover:text-white transition-all flex-1 max-w-[150px] active:scale-95">{t.retry}</button>
+                                    <button onClick={() => { dispatch({ type: 'RETRY' }); }} className="bg-white text-black font-black uppercase text-[9px] tracking-[0.5em] py-4 px-6 md:py-5 md:px-8 rounded-2xl hover:bg-red-600 hover:text-white transition-all flex-1 max-w-[150px] active:scale-95">{t.retry}</button>
                                     <button onClick={openChat} className="bg-red-600 text-white font-black uppercase text-[9px] tracking-[0.5em] py-4 px-6 md:py-5 md:px-8 rounded-2xl hover:bg-white hover:text-black transition-all flex-1 max-w-[150px] active:scale-95">{t.contact}</button>
                                 </div>
                             </div>
@@ -1714,11 +1879,11 @@ const GrowthLabGameComp = memo(({ navigateTo, playSound, profileImageUrl, openCh
                         {/* PERF: Direct DOM mapping for targets */}
                         {targets.map(t => {
                             const AssetComponent = t.type === 'lead' ? GameAssets.Lead : 
-                                               t.type === 'golden_rocket' ? GameAssets.GoldenRocket : 
-                                               t.type === 'spam' ? GameAssets.Bot : 
-                                               t.type === 'vip' ? GameAssets.Partner : 
-                                               t.type === 'bad_buzz' ? GameAssets.BadBuzz : 
-                                               GameAssets.Streak;
+                                                   t.type === 'golden_rocket' ? GameAssets.GoldenRocket : 
+                                                   t.type === 'spam' ? GameAssets.Bot : 
+                                                   t.type === 'vip' ? GameAssets.Partner : 
+                                                   t.type === 'bad_buzz' ? GameAssets.BadBuzz : 
+                                                   GameAssets.Streak;
                             return (
                             <div 
                                 key={t.id} 
@@ -1790,7 +1955,7 @@ const GrowthLabGameComp = memo(({ navigateTo, playSound, profileImageUrl, openCh
                             </div>
                         </div>
                     </div>
-    
+   
 
             <div className="flex justify-center pt-8">
                 <button onClick={() => navigateTo('home')} className="flex items-center gap-6 text-slate-500 hover:text-white font-black uppercase text-[10px] tracking-[0.8em] transition-all group active:scale-95"><ArrowRight className="rotate-180 group-hover:-translate-x-4 transition-transform duration-500" size={20} /> {t.back}</button>
@@ -1818,7 +1983,7 @@ const MainContent = memo(({ view, profileImageUrl, t, experiences, stackData, te
             <TrustStrip lang={'fr'} t={t.trust} />
             
             {/* PERF: Removed 'willChange: transform' */}
-            <section className="py-24 md:py-48 px-6 text-left relative">
+            <section className="py-24 md:py-48 px-6 text-left relative content-auto" style={{ contain: 'layout paint' }}>
               <div className="max-w-7xl mx-auto space-y-16 md:space-y-32">
                 <div className="flex flex-col md:flex-row justify-between items-end gap-6 md:gap-10">
                   <div className="space-y-3 md:space-y-4">
@@ -1848,7 +2013,7 @@ const MainContent = memo(({ view, profileImageUrl, t, experiences, stackData, te
             <Experiences experiences={experiences} onSpell={triggerSpell} t={t.exp} />
 
             {/* PERF: Removed 'willChange: transform' */}
-            <section className="py-24 md:py-48 px-6 bg-black/80 md:backdrop-blur-3xl font-black relative">
+            <section className="py-24 md:py-48 px-6 bg-black/80 md:backdrop-blur-3xl font-black relative content-auto" style={{ contain: 'layout paint' }}>
                <div className="max-w-6xl mx-auto text-center">
                   <div className="mb-20 md:mb-32 space-y-4 md:space-y-6"><p className="text-red-500 uppercase text-[10px] md:text-[11px] tracking-[1em]">{t.cursus.sub}</p><h3 className="text-5xl md:text-7xl lg:text-[90px] font-black text-white uppercase tracking-tighter italic opacity-95 leading-none">{t.cursus.title}</h3></div>
                   <CursusSectionComp t={t.cursus} />
@@ -2075,7 +2240,7 @@ const App = () => {
           ticking = true;
       }
     };
-    window.addEventListener('scroll', handleScroll, { passive: true });
+    window.addEventListener('scroll', handleScroll, { passive: true }); // Point 8: Passive Event
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
@@ -2169,7 +2334,7 @@ const App = () => {
           <div className="animate-reveal">
             <div className="flex items-center gap-8 md:gap-10 mb-10 md:mb-14 flex-col md:flex-row text-center md:text-left">
               <div className="p-8 md:p-10 bg-red-600 rounded-[2.5rem] md:rounded-[3rem] text-white shadow-glow-red">
-                {React.createElement(selectedData.icon, { size: 40, className: "md:w-12 md:h-12" })}
+                {selectedData?.icon && React.createElement(selectedData.icon, { size: 40, className: "md:w-12 md:h-12" })}
               </div>
               <h3 className="text-2xl sm:text-3xl md:text-5xl lg:text-6xl font-black text-white uppercase tracking-tighter leading-[0.9] md:leading-[0.8] break-words hyphens-auto">{selectedData.name}</h3>
             </div>
