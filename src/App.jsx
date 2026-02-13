@@ -1,4 +1,5 @@
-import React, { useState, useEffect, useRef, useCallback, memo, useMemo, useReducer } from 'react';
+import React, { useState, useEffect, useRef, useCallback, memo, useMemo, useReducer, Suspense, lazy, createElement, useLayoutEffect } from 'react';
+import { createRoot } from 'react-dom/client';
 import { 
   Rocket, Users, Target, Mail, Gamepad2, Zap, ArrowRight,
   Search, Share2, MessageCircle, Cpu, Layers, 
@@ -13,7 +14,7 @@ import {
   HelpCircle, Check, Unlock, MousePointer2, Keyboard, Fingerprint, FileText, Crosshair, ListTodo, Info, XCircle
 } from 'lucide-react';
 
-// --- CONFIGURATION SYSTÈME SONORE OPTIMISÉE ---
+// --- CONFIGURATION SYSTÈME SONORE ---
 const audioSystem = {
   ctx: null,
   get() {
@@ -28,15 +29,24 @@ const audioSystem = {
   }
 };
 
-// --- HOOK OPTIMISATION: STABLE INTERSECTION OBSERVER ---
-const useInView = (ref, { threshold = 0.1, rootMargin = '0px' } = {}) => {
+// --- HOOK OPTIMISATION: STABLE INTERSECTION OBSERVER (TRUE ONCE) ---
+const useInView = (ref, { threshold = 0.1, rootMargin = '0px', triggerOnce = true } = {}) => {
   const [isInView, setIsInView] = useState(false);
+  const hasTriggered = useRef(false);
   
   useEffect(() => {
-    if (!ref.current) return;
-    
+    if (!ref.current || (triggerOnce && hasTriggered.current)) return;
+
     const observer = new IntersectionObserver(([entry]) => {
-      setIsInView(prev => (prev === entry.isIntersecting ? prev : entry.isIntersecting));
+      if (entry.isIntersecting) {
+        setIsInView(true);
+        if (triggerOnce) {
+          hasTriggered.current = true;
+          observer.disconnect();
+        }
+      } else if (!triggerOnce) {
+        setIsInView(false);
+      }
     }, { threshold, rootMargin });
     
     observer.observe(ref.current);
@@ -44,9 +54,122 @@ const useInView = (ref, { threshold = 0.1, rootMargin = '0px' } = {}) => {
     return () => {
       observer.disconnect();
     };
-  }, [threshold, rootMargin]);
+  }, [threshold, rootMargin, triggerOnce]); // Depend only on stable config
   
   return isInView;
+};
+
+// --- STYLES GLOBAUX (INJECTION VIA HEAD) ---
+const GLOBAL_STYLES_STRING = `
+  :root { scroll-behavior: smooth; }
+  body { font-family: 'Inter', sans-serif; background: #020202; overflow-x: hidden; touch-action: pan-y; margin: 0; padding: 0; }
+    
+  /* Performance Utilities */
+  .cv-auto { content-visibility: auto; contain-intrinsic-size: 1px 1000px; }
+  .gpu-accel { transform: translate3d(0,0,0); backface-visibility: hidden; perspective: 1000px; }
+  .will-change-transform { will-change: transform; }
+  .will-change-opacity { will-change: opacity; }
+   
+  @media (prefers-reduced-motion: no-preference) {
+    .animate-pulse, .animate-bounce, .animate-spin-slow {
+      animation-play-state: running;
+    }
+  }
+
+  .animate-pulse, .animate-bounce, .animate-float, .animate-spin-slow {
+    will-change: transform, opacity;
+  }
+   
+  .animate-pulse:hover, .animate-bounce:hover {
+    will-change: transform;
+  }
+
+  ::-webkit-scrollbar { width: 5px; }
+  ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 10px; }
+  ::-webkit-scrollbar-thumb:hover { background: #dc2626; }
+
+  @keyframes float { 
+    0%, 100% { transform: translate3d(0, 0, 0); } 
+    50% { transform: translate3d(0, -10px, 0); } 
+  }
+   
+  .animate-reveal, .animate-fade-in-up, .animate-slide-in-right {
+    animation-fill-mode: forwards;
+  }
+
+  .animate-reveal { animation: reveal 0.6s cubic-bezier(0.19, 1, 0.22, 1) forwards; }
+  .animate-reveal-bottom { animation: reveal-bottom 0.6s cubic-bezier(0.19, 1, 0.22, 1) forwards; }
+  .animate-slide-in-right { animation: slide-in-right 1s cubic-bezier(0.19, 1, 0.22, 1) forwards; }
+  .animate-stress { animation: stress 0.3s infinite ease-in-out; }
+  .animate-shake { animation: shake 0.5s cubic-bezier(.36,.07,.19,.97) both; }
+  .animate-float-out { animation: float-out 0.8s ease-out forwards; }
+  .animate-spin-slow { animation: spin 8s linear infinite; }
+  .animate-fade-in-up { animation: fade-in-up 0.8s cubic-bezier(0.2, 0.8, 0.2, 1) forwards; opacity: 0; }
+  .animate-lumos-text { animation: lumos-text 1.5s cubic-bezier(0.2, 0.8, 0.2, 1) forwards; }
+  .animate-shimmer-fast { animation: shimmer-fast 1.5s infinite; }
+  .animate-scroll-normal { animation: scroll-normal 20s linear infinite; }
+  .animate-wave { animation: wave 2s infinite; }
+  .animate-quick-pop { animation: quick-pop 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards; }
+    
+  .will-change-pos { will-change: transform; }
+    
+  @media (min-width: 768px) {
+    .animate-float { animation: float 6s ease-in-out infinite; }
+  }
+    
+  @media (prefers-reduced-motion: reduce) {
+    .animate-spin-slow, .animate-float, .animate-pulse, .animate-bounce, .animate-wave, .animate-shimmer-fast, .animate-scroll-normal, .animate-stress, .animate-shake {
+      animation: none !important;
+      transition: none !important;
+      transform: none !important;
+    }
+  }
+
+  @keyframes reveal { from { opacity: 0; transform: translate3d(0, 15px, 0); } to { opacity: 1; transform: translate3d(0, 0, 0); } }
+  @keyframes reveal-bottom { from { opacity: 0; transform: translate3d(0, 50px, 0); } to { opacity: 1; transform: translate3d(0, 0, 0); } }
+  @keyframes slide-in-right { from { opacity: 0; transform: translate3d(30px, 0, 0); } to { opacity: 1; transform: translate3d(0, 0, 0); } }
+  @keyframes stress { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.01); border-color: #dc2626; } }
+  @keyframes shake { 10%, 90% { transform: translate3d(-1px, 0, 0); } 20%, 80% { transform: translate3d(2px, 0, 0); } 30%, 50%, 70% { transform: translate3d(-4px, 0, 0); } 40%, 60% { transform: translate3d(4px, 0, 0); } }
+  @keyframes float-out { from { opacity: 1; transform: translateY(0) scale(1); } to { opacity: 0; transform: translateY(-100px) scale(1.2); } }
+  @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+  @keyframes fade-in-up { from { opacity: 0; transform: translate3d(0, 30px, 0); } to { opacity: 1; transform: translate3d(0, 0, 0); } }
+  @keyframes lumos-text { 0% { opacity: 0; letter-spacing: 1em; filter: blur(10px); } 100% { opacity: 1; letter-spacing: 0; filter: blur(0); } }
+  @keyframes shimmer-fast { from { transform: translate3d(-100%, 0, 0); } to { transform: translate3d(100%, 0, 0); } }
+  @keyframes scroll-normal { from { transform: translate3d(0, 0, 0); } to { transform: translate3d(-33.33%, 0, 0); } }
+  @keyframes wave { 0% { transform: rotate(0deg); } 10% { transform: rotate(14deg); } 20% { transform: rotate(-8deg); } 30% { transform: rotate(14deg); } 40% { transform: rotate(-4deg); } 50% { transform: rotate(10deg); } 60% { transform: rotate(0deg); } 100% { transform: rotate(0deg); } }
+  @keyframes quick-pop { from { opacity: 0; transform: scale(0.95); } to { opacity: 1; transform: scale(1); } }
+  @keyframes confetti-fall { 0% { background-position: 0 0; } 100% { background-position: 100px 1000px; } }
+  @keyframes bounce-in { 0% { transform: scale(0); opacity: 0; } 60% { transform: scale(1.2); opacity: 1; } 100% { transform: scale(1); } }
+  .animate-confetti-fall { animation: confetti-fall 10s linear infinite; }
+  .animate-bounce-in { animation: bounce-in 0.8s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards; }
+
+  .digital-grid { background-image: linear-gradient(rgba(220, 38, 38, 0.03) 1px, transparent 1px), linear-gradient(90deg, rgba(220, 38, 38, 0.03) 1px, transparent 1px); background-size: 50px 50px; }
+  .shadow-glow-red { box-shadow: 0 0 50px rgba(220, 38, 38, 0.4); }
+  .shadow-glow-emerald { box-shadow: 0 0 40px rgba(16, 185, 129, 0.4); }
+  .shadow-glow-white { box-shadow: 0 0 40px rgba(255, 255, 255, 0.6); }
+  .shadow-glow-yellow { box-shadow: 0 0 40px rgba(234, 179, 8, 0.4); }
+  .shadow-glow-purple { box-shadow: 0 0 40px rgba(168, 85, 247, 0.4); }
+    
+  .custom-scrollbar::-webkit-scrollbar { width: 5px; }
+  .custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 10px; }
+  .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #dc2626; }
+    
+  .delay-100 { animation-delay: 100ms; }
+  .delay-200 { animation-delay: 200ms; }
+  .delay-300 { animation-delay: 300ms; }
+  .animation-delay-2000 { animation-delay: 2s; }
+`;
+
+// Hook pour injecter les styles une seule fois sans React render
+const useGlobalStyles = () => {
+  useLayoutEffect(() => {
+    const style = document.createElement('style');
+    style.innerHTML = GLOBAL_STYLES_STRING;
+    document.head.appendChild(style);
+    return () => {
+      document.head.removeChild(style);
+    };
+  }, []);
 };
 
 // --- GAME ASSETS (MEMOIZED) ---
@@ -104,131 +227,6 @@ const GameAssets = {
     </svg>
   ))
 };
-
-// --- STYLES GLOBAUX OPTIMISÉS ---
-const GLOBAL_STYLES = `
-  /* Police gérée dans index.html pour éviter le blocage du rendu */
-  :root { scroll-behavior: smooth; }
-  body { font-family: 'Inter', sans-serif; background: #020202; overflow-x: hidden; touch-action: pan-y; }
-   
-  /* Classes utilitaires pour la performance */
-  .cv-auto { content-visibility: auto; contain-intrinsic-size: 1px 1000px; }
-  .gpu-accel { transform: translate3d(0,0,0); }
-  
-  @media (prefers-reduced-motion: no-preference) {
-    .animate-pulse, .animate-bounce, .animate-spin-slow {
-      animation-play-state: running;
-    }
-  }
-  
-  /* --- MOBILE PERF MODE (<768px) --- */
-  @media (max-width: 768px) {
-    .animate-spin-slow, .animate-float, .animate-shimmer-fast, .animate-pulse, .animate-bounce, .animate-wave, .animate-scroll-normal {
-      animation: none !important;
-      transform: none !important;
-      transition: none !important;
-    }
-    
-    /* Désactivation des effets coûteux sur mobile */
-    .shadow-glow-red, .shadow-glow-emerald, .shadow-glow-white, .shadow-glow-yellow, .shadow-glow-purple {
-      box-shadow: none !important;
-    }
-    
-    .backdrop-blur-md, .backdrop-blur-3xl {
-      backdrop-filter: none !important;
-      -webkit-backdrop-filter: none !important;
-      background-color: rgba(10, 10, 10, 0.95) !important; /* Fallback opaque */
-    }
-    
-    .digital-grid {
-      display: none !important; /* Moins de paint */
-    }
-  }
-
-  .animate-pulse, .animate-bounce, .animate-float, .animate-spin-slow {
-    will-change: transform, opacity;
-  }
-  
-  .animate-pulse:hover, .animate-bounce:hover {
-    will-change: transform;
-  }
-
-  /* Scrollbar globale stylisée */
-  ::-webkit-scrollbar { width: 5px; }
-  ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 10px; }
-  ::-webkit-scrollbar-thumb:hover { background: #dc2626; }
-
-  @keyframes float { 
-    0%, 100% { transform: translate3d(0, 0, 0); } 
-    50% { transform: translate3d(0, -10px, 0); } 
-  }
-  
-  .animate-reveal, .animate-fade-in-up, .animate-slide-in-right {
-    animation-fill-mode: forwards;
-  }
-
-  .animate-reveal { animation: reveal 0.6s cubic-bezier(0.19, 1, 0.22, 1) forwards; }
-  .animate-reveal-bottom { animation: reveal-bottom 0.6s cubic-bezier(0.19, 1, 0.22, 1) forwards; }
-  .animate-slide-in-right { animation: slide-in-right 1s cubic-bezier(0.19, 1, 0.22, 1) forwards; }
-  .animate-stress { animation: stress 0.3s infinite ease-in-out; }
-  .animate-shake { animation: shake 0.5s cubic-bezier(.36,.07,.19,.97) both; }
-  .animate-float-out { animation: float-out 0.8s ease-out forwards; }
-  .animate-spin-slow { animation: spin 8s linear infinite; }
-  .animate-fade-in-up { animation: fade-in-up 0.8s cubic-bezier(0.2, 0.8, 0.2, 1) forwards; opacity: 0; }
-  .animate-lumos-text { animation: lumos-text 1.5s cubic-bezier(0.2, 0.8, 0.2, 1) forwards; }
-  .animate-shimmer-fast { animation: shimmer-fast 1.5s infinite; }
-  .animate-scroll-normal { animation: scroll-normal 20s linear infinite; }
-  .animate-wave { animation: wave 2s infinite; }
-  .animate-quick-pop { animation: quick-pop 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards; }
-   
-  .will-change-pos { will-change: transform; }
-   
-  @media (min-width: 768px) {
-    .animate-float { animation: float 6s ease-in-out infinite; }
-  }
-   
-  @media (prefers-reduced-motion: reduce) {
-    .animate-spin-slow, .animate-float, .animate-pulse, .animate-bounce, .animate-wave, .animate-shimmer-fast, .animate-scroll-normal, .animate-stress, .animate-shake {
-      animation: none !important;
-      transition: none !important;
-      transform: none !important;
-    }
-  }
-
-  @keyframes reveal { from { opacity: 0; transform: translate3d(0, 15px, 0); } to { opacity: 1; transform: translate3d(0, 0, 0); } }
-  @keyframes reveal-bottom { from { opacity: 0; transform: translate3d(0, 50px, 0); } to { opacity: 1; transform: translate3d(0, 0, 0); } }
-  @keyframes slide-in-right { from { opacity: 0; transform: translate3d(30px, 0, 0); } to { opacity: 1; transform: translate3d(0, 0, 0); } }
-  @keyframes stress { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.01); border-color: #dc2626; } }
-  @keyframes shake { 10%, 90% { transform: translate3d(-1px, 0, 0); } 20%, 80% { transform: translate3d(2px, 0, 0); } 30%, 50%, 70% { transform: translate3d(-4px, 0, 0); } 40%, 60% { transform: translate3d(4px, 0, 0); } }
-  @keyframes float-out { from { opacity: 1; transform: translateY(0) scale(1); } to { opacity: 0; transform: translateY(-100px) scale(1.2); } }
-  @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
-  @keyframes fade-in-up { from { opacity: 0; transform: translate3d(0, 30px, 0); } to { opacity: 1; transform: translate3d(0, 0, 0); } }
-  @keyframes lumos-text { 0% { opacity: 0; letter-spacing: 1em; filter: blur(10px); } 100% { opacity: 1; letter-spacing: 0; filter: blur(0); } }
-  @keyframes shimmer-fast { from { transform: translate3d(-100%, 0, 0); } to { transform: translate3d(100%, 0, 0); } }
-  @keyframes scroll-normal { from { transform: translate3d(0, 0, 0); } to { transform: translate3d(-33.33%, 0, 0); } }
-  @keyframes wave { 0% { transform: rotate(0deg); } 10% { transform: rotate(14deg); } 20% { transform: rotate(-8deg); } 30% { transform: rotate(14deg); } 40% { transform: rotate(-4deg); } 50% { transform: rotate(10deg); } 60% { transform: rotate(0deg); } 100% { transform: rotate(0deg); } }
-  @keyframes quick-pop { from { opacity: 0; transform: scale(0.95); } to { opacity: 1; transform: scale(1); } }
-  @keyframes confetti-fall { 0% { background-position: 0 0; } 100% { background-position: 100px 1000px; } }
-  @keyframes bounce-in { 0% { transform: scale(0); opacity: 0; } 60% { transform: scale(1.2); opacity: 1; } 100% { transform: scale(1); } }
-  .animate-confetti-fall { animation: confetti-fall 10s linear infinite; }
-  .animate-bounce-in { animation: bounce-in 0.8s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards; }
-
-  .digital-grid { background-image: linear-gradient(rgba(220, 38, 38, 0.03) 1px, transparent 1px), linear-gradient(90deg, rgba(220, 38, 38, 0.03) 1px, transparent 1px); background-size: 50px 50px; }
-  .shadow-glow-red { box-shadow: 0 0 50px rgba(220, 38, 38, 0.4); }
-  .shadow-glow-emerald { box-shadow: 0 0 40px rgba(16, 185, 129, 0.4); }
-  .shadow-glow-white { box-shadow: 0 0 40px rgba(255, 255, 255, 0.6); }
-  .shadow-glow-yellow { box-shadow: 0 0 40px rgba(234, 179, 8, 0.4); }
-  .shadow-glow-purple { box-shadow: 0 0 40px rgba(168, 85, 247, 0.4); }
-   
-  .custom-scrollbar::-webkit-scrollbar { width: 5px; }
-  .custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 10px; }
-  .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #dc2626; }
-   
-  .delay-100 { animation-delay: 100ms; }
-  .delay-200 { animation-delay: 200ms; }
-  .delay-300 { animation-delay: 300ms; }
-  .animation-delay-2000 { animation-delay: 2s; }
-`;
 
 const formatScore = (num) => {
   if (num >= 1000000) return (num / 1000000).toFixed(1) + 'M';
@@ -435,7 +433,7 @@ const Toast = memo(({ message, onClose }) => {
     }, [onClose]);
 
     return (
-        <div className="fixed bottom-8 left-1/2 -translate-x-1/2 z-[2000] bg-white text-black px-6 py-3 rounded-full shadow-2xl flex items-center gap-3 font-black text-xs uppercase tracking-wider animate-fade-in-up">
+        <div className="fixed bottom-8 left-1/2 -translate-x-1/2 z-[2000] bg-white text-black px-6 py-3 rounded-full shadow-2xl flex items-center gap-3 font-black text-xs uppercase tracking-wider animate-fade-in-up will-change-transform">
             <CheckCircle size={16} className="text-emerald-500" />
             {message}
         </div>
@@ -446,17 +444,11 @@ const VictoryCelebration = memo(() => {
     return (
         <div className="fixed inset-0 z-[9999] pointer-events-none flex items-center justify-center overflow-hidden">
              <div className="absolute inset-0 bg-black/40 backdrop-blur-[2px] animate-fade-in-up" />
-             <div className="absolute inset-0 animate-confetti-fall" style={{backgroundImage: 'radial-gradient(circle, #fbbf24 4px, transparent 4px)', backgroundSize: '60px 60px', opacity: 0.5}}></div>
-             <div className="relative z-10 flex flex-col items-center animate-bounce-in">
+             <div className="absolute inset-0 animate-confetti-fall will-change-transform" style={{backgroundImage: 'radial-gradient(circle, #fbbf24 4px, transparent 4px)', backgroundSize: '60px 60px', opacity: 0.5}}></div>
+             <div className="relative z-10 flex flex-col items-center animate-bounce-in will-change-transform">
                  <Trophy size={100} className="text-yellow-400 drop-shadow-[0_0_30px_rgba(251,191,36,0.6)]" />
                  <h2 className="text-6xl font-black text-white uppercase italic tracking-tighter mt-6 drop-shadow-2xl">Expert <span className="text-yellow-400">Unlock</span></h2>
              </div>
-             <style>{`
-                 @keyframes confetti-fall { 0% { background-position: 0 0; } 100% { background-position: 100px 1000px; } }
-                 .animate-confetti-fall { animation: confetti-fall 10s linear infinite; }
-                 @keyframes bounce-in { 0% { transform: scale(0); opacity: 0; } 60% { transform: scale(1.2); opacity: 1; } 100% { transform: scale(1); } }
-                 .animate-bounce-in { animation: bounce-in 0.8s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards; }
-              `}</style>
         </div>
     )
 });
@@ -472,7 +464,7 @@ const QuestTracker = memo(({ found, t }) => {
   const hasWord2 = found.includes('alohomora');
   const hasWord3 = found.includes('wingardium');
   const hasHighScore = found.includes('highscore');
-       
+        
   const wordCount = [hasWord1, hasWord2, hasWord3].filter(Boolean).length;
 
   useEffect(() => {
@@ -503,7 +495,7 @@ const QuestTracker = memo(({ found, t }) => {
         )}
 
         <div 
-            className={`group flex flex-col bg-[#0a0a0a]/95 backdrop-blur-md border ${isComplete ? 'border-yellow-500/50 shadow-glow-yellow' : 'border-white/10 shadow-2xl'} rounded-2xl transition-all duration-300 cursor-pointer overflow-hidden relative w-auto min-w-[300px]`}
+            className={`group flex flex-col bg-[#0a0a0a]/95 backdrop-blur-md border ${isComplete ? 'border-yellow-500/50 shadow-glow-yellow' : 'border-white/10 shadow-2xl'} rounded-2xl transition-all duration-300 cursor-pointer overflow-hidden relative w-auto min-w-[300px] will-change-transform`}
             onClick={() => !isComplete && setIsOpen(!isOpen)}
         >
             <div className="p-4 flex items-center justify-between">
@@ -562,16 +554,33 @@ const QuestTracker = memo(({ found, t }) => {
   );
 });
 
-const Navbar = memo(({ scrolled, view, navigateTo, openChat, lang, setLang, t, isMuted, toggleMute }) => {
+// --- NAVBAR ISOLATED SCROLL ---
+const Navbar = memo(({ view, navigateTo, openChat, lang, setLang, t, isMuted, toggleMute }) => {
+  const [scrolled, setScrolled] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
+  useEffect(() => {
+      const handleScroll = () => {
+          const isScrolled = window.scrollY > 20;
+          setScrolled(prev => prev !== isScrolled ? isScrolled : prev);
+      };
+      // Passive listener for performance
+      window.addEventListener('scroll', handleScroll, { passive: true });
+      return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
+
+  const handleNav = useCallback((target) => {
+      navigateTo(target);
+      setIsMobileMenuOpen(false);
+  }, [navigateTo]);
+
   return (
-    <nav className={`fixed top-0 w-full z-[100] transition-all duration-700 font-black ${(scrolled || view === 'play') ? 'bg-black/95 backdrop-blur-md border-b border-white/10 py-4 shadow-2xl' : 'bg-transparent py-6 md:py-10'}`}>
+    <nav className={`fixed top-0 w-full z-[100] transition-all duration-700 font-black will-change-transform ${(scrolled || view === 'play') ? 'bg-black/95 backdrop-blur-md border-b border-white/10 py-4 shadow-2xl' : 'bg-transparent py-6 md:py-10'}`}>
       <div className="max-w-7xl mx-auto px-6 md:px-10 flex justify-between items-center relative">
-        <div onClick={() => { navigateTo('home'); window.scrollTo({ top: 0, behavior: 'instant' }); }} className="group cursor-pointer flex items-center gap-4 md:gap-6 active:scale-90 transition-all duration-500 z-50">
+        <div onClick={() => { navigateTo('home'); }} className="group cursor-pointer flex items-center gap-4 md:gap-6 active:scale-90 transition-all duration-500 z-50">
           <div className="relative">
             <div className="absolute inset-0 bg-red-600 blur-xl opacity-0 group-hover:opacity-40 transition-opacity" />
-            <div className="w-12 h-12 md:w-16 md:h-16 bg-gradient-to-tr from-red-600 via-red-500 to-orange-500 rounded-2xl md:rounded-3xl flex items-center justify-center text-white shadow-xl group-hover:rotate-12 transition-transform duration-500 text-xl md:text-2xl font-black relative z-10">LL</div>
+            <div className="w-12 h-12 md:w-16 md:h-16 bg-gradient-to-tr from-red-600 via-red-500 to-orange-500 rounded-2xl md:rounded-3xl flex items-center justify-center text-white shadow-xl group-hover:rotate-12 transition-transform duration-500 text-xl md:text-2xl font-black relative z-10 will-change-transform">LL</div>
             <div className="absolute -top-1 -right-1 w-4 h-4 md:w-5 md:h-5 bg-emerald-500 border-[3px] border-black rounded-full shadow-glow-emerald z-20"></div>
           </div>
           <div className="flex flex-col leading-tight font-black pt-1">
@@ -589,9 +598,9 @@ const Navbar = memo(({ scrolled, view, navigateTo, openChat, lang, setLang, t, i
               <button onClick={() => setIsMobileMenuOpen(false)} className="absolute top-8 right-8 text-white/50 hover:text-white p-4"><X size={32} /></button>
               
               <div className="flex flex-col items-center gap-10">
-                <button onClick={() => { navigateTo('home'); setIsMobileMenuOpen(false); }} className={`text-4xl font-black uppercase tracking-[0.2em] ${view === 'home' ? 'text-red-500' : 'text-white'}`}>{t.expertise}</button>
-                <button onClick={() => { navigateTo('bio'); setIsMobileMenuOpen(false); }} className={`text-4xl font-black uppercase tracking-[0.2em] ${view === 'bio' ? 'text-red-500' : 'text-white'}`}>{t.bio}</button>
-                <button onClick={() => { navigateTo('play'); setIsMobileMenuOpen(false); }} className={`text-4xl font-black uppercase tracking-[0.2em] ${view === 'play' ? 'text-red-500' : 'text-white'}`}>{t.lab}</button>
+                <button onClick={() => handleNav('home')} className={`text-4xl font-black uppercase tracking-[0.2em] ${view === 'home' ? 'text-red-500' : 'text-white'}`}>{t.expertise}</button>
+                <button onClick={() => handleNav('bio')} className={`text-4xl font-black uppercase tracking-[0.2em] ${view === 'bio' ? 'text-red-500' : 'text-white'}`}>{t.bio}</button>
+                <button onClick={() => handleNav('play')} className={`text-4xl font-black uppercase tracking-[0.2em] ${view === 'play' ? 'text-red-500' : 'text-white'}`}>{t.lab}</button>
               </div>
 
               <div className="flex flex-col items-center gap-8 mt-8 border-t border-white/10 pt-12 w-2/3">
@@ -654,12 +663,12 @@ const SkillRadar = memo(({t}) => {
 });
 
 const TechStackTicker = memo(({t}) => {
-    const stack = ["Meta Ads", "Google Ads", "GA4", "SEO Technical", "TikTok Ads", "HubSpot", "Zapier", "Copywriting", "Viral Loops", "Looker Studio", "Notion", "LinkedIn Growth"];
+    const stack = useMemo(() => ["Meta Ads", "Google Ads", "GA4", "SEO Technical", "TikTok Ads", "HubSpot", "Zapier", "Copywriting", "Viral Loops", "Looker Studio", "Notion", "LinkedIn Growth"], []);
     return (
         <div className="w-full overflow-hidden border-y border-white/5 bg-white/[0.02] py-4 relative">
             <div className="absolute left-0 top-0 bottom-0 w-12 bg-gradient-to-r from-[#0a0a0a] to-transparent z-10" />
             <div className="absolute right-0 top-0 bottom-0 w-12 bg-gradient-to-l from-[#0a0a0a] to-transparent z-10" />
-            <div className="flex whitespace-nowrap animate-scroll-normal">
+            <div className="flex whitespace-nowrap animate-scroll-normal will-change-transform">
                 {[...stack, ...stack, ...stack].map((item, i) => (
                     <span key={i} className="mx-6 text-slate-500 font-black uppercase text-[10px] tracking-widest flex items-center gap-2">
                         <div className="w-1 h-1 bg-red-600 rounded-full" /> {item}
@@ -688,7 +697,7 @@ const TrustStrip = memo(({ lang, t }) => (
 
 const TestimonialsSection = memo(({ testimonials, t }) => {
   const containerRef = useRef(null);
-  const isVisible = useInView(containerRef);
+  const isVisible = useInView(containerRef, { triggerOnce: true });
 
   return (
     <section ref={containerRef} className={`py-16 md:py-40 px-6 relative font-black border-t border-white/5 ${isVisible ? 'opacity-100' : 'opacity-0'} transition-opacity duration-1000 cv-auto`}>
@@ -903,7 +912,7 @@ const Modal = memo(({ isOpen, onClose, children }) => {
   return (
     <div className="fixed inset-0 z-[500] flex items-center justify-center p-4 md:p-6 animate-quick-pop">
       <div className="absolute inset-0 bg-black/90" onClick={onClose} />
-      <div className="relative w-full max-w-xl bg-[#0d0d0d] border border-white/10 rounded-[2rem] md:rounded-[3rem] shadow-3xl border-b-4 border-b-red-600 overflow-hidden transform transition-all">
+      <div className="relative w-full max-w-xl bg-[#0d0d0d] border border-white/10 rounded-[2rem] md:rounded-[3rem] shadow-3xl border-b-4 border-b-red-600 overflow-hidden transform transition-all will-change-transform">
         <button onClick={onClose} className="absolute top-6 right-6 md:top-8 md:right-8 text-slate-500 hover:text-white transition bg-white/5 p-3 rounded-full z-20 hover:rotate-90 duration-300"><X size={20} /></button>
         <div className="max-h-[85vh] overflow-y-auto custom-scrollbar p-8 md:p-14">
           {children}
@@ -966,14 +975,14 @@ const HeroSection = memo(({ openChat, playSound, profileImageUrl, t, handleDownl
                   srcSet={`${profileImageUrl}?w=400 400w, ${profileImageUrl}?w=800 800w, ${profileImageUrl}?w=1200 1200w`}
                   sizes="(max-width: 768px) 100vw, 50vw"
                   alt="Lucien Lukes Freelance Marketing Montpellier France" 
-                  className="w-full h-full object-cover object-top brightness-110 contrast-105" 
+                  className="w-full h-full object-cover object-top brightness-110 contrast-105 will-change-transform" 
                   loading="lazy"
                   decoding="async"
               />
             </div>
             
             {/* BULLE EXPÉRIENCE */}
-            <div className="absolute -top-12 right-8 z-50 animate-float bg-black/80 backdrop-blur-md border border-white/5 p-3 pr-5 rounded-full flex items-center gap-3 shadow-xl">
+            <div className="absolute -top-12 right-8 z-50 animate-float bg-black/80 backdrop-blur-md border border-white/5 p-3 pr-5 rounded-full flex items-center gap-3 shadow-xl will-change-transform">
                   <div className="bg-red-600/20 p-2 rounded-full text-red-500"><Trophy size={16} /></div>
                   <div>
                       <p className="text-[9px] text-slate-400 font-bold uppercase tracking-wider">{t.exp}</p>
@@ -982,7 +991,7 @@ const HeroSection = memo(({ openChat, playSound, profileImageUrl, t, handleDownl
             </div>
 
             {/* BULLE SUCCÈS */}
-            <div className="absolute -bottom-12 left-8 z-50 animate-float animation-delay-2000 bg-black/80 backdrop-blur-md border border-white/5 p-3 pr-5 rounded-full flex items-center gap-3 shadow-xl">
+            <div className="absolute -bottom-12 left-8 z-50 animate-float animation-delay-2000 bg-black/80 backdrop-blur-md border border-white/5 p-3 pr-5 rounded-full flex items-center gap-3 shadow-xl will-change-transform">
                   <div className="bg-emerald-500/20 p-2 rounded-full text-emerald-500"><CheckCircle size={16} /></div>
                   <div>
                       <p className="text-[9px] text-slate-400 font-bold uppercase tracking-wider">{t.proj}</p>
@@ -999,7 +1008,7 @@ const HeroSection = memo(({ openChat, playSound, profileImageUrl, t, handleDownl
 const Experiences = memo(({ experiences, onSpell, t }) => {
   const containerRef = useRef(null);
   const progressRef = useRef(null);
-  const isVisible = useInView(containerRef);
+  const isVisible = useInView(containerRef, { triggerOnce: true });
 
   useEffect(() => {
     let ticking = false;
@@ -1078,7 +1087,7 @@ const Experiences = memo(({ experiences, onSpell, t }) => {
         </div>
         <div className="relative space-y-12 md:space-y-32 text-left">
           <div className="absolute left-[31px] md:left-1/2 top-0 bottom-0 w-[4px] bg-white/5 hidden md:block overflow-hidden rounded-full shadow-inner font-black">
-              <div ref={progressRef} className="absolute top-0 left-0 w-full h-full bg-gradient-to-b from-red-600 via-orange-500 to-red-400 origin-top font-black gpu-accel" style={{ transform: 'scaleY(0) translateZ(0)' }} />
+              <div ref={progressRef} className="absolute top-0 left-0 w-full h-full bg-gradient-to-b from-red-600 via-orange-500 to-red-400 origin-top font-black gpu-accel will-change-transform" style={{ transform: 'scaleY(0) translateZ(0)' }} />
           </div>
 
           {experiences.map((exp, i) => (
@@ -1157,7 +1166,7 @@ const CursusSectionComp = memo(({ t }) => (
 
 const SectionBio = memo(({ profileImageUrl, navigateTo, copyDiscord, copyFeedback, playSound, onSpell, t, handleDownload, sayHello }) => {
   const containerRef = useRef(null);
-  const isVisible = useInView(containerRef);
+  const isVisible = useInView(containerRef, { triggerOnce: true });
 
   return (
   <div ref={containerRef} className={`pt-24 md:pt-40 pb-16 md:pb-24 px-6 ${isVisible ? 'animate-reveal' : 'opacity-0'} font-black cv-auto`}>
@@ -1177,7 +1186,7 @@ const SectionBio = memo(({ profileImageUrl, navigateTo, copyDiscord, copyFeedbac
                 srcSet={`${profileImageUrl}?w=400 400w, ${profileImageUrl}?w=800 800w, ${profileImageUrl}?w=1200 1200w`}
                 sizes="(max-width: 768px) 100vw, 50vw"
                 alt="Consultant influence marketing & Freelance marketing France" 
-                className="w-full h-full object-cover object-top transition-transform duration-700 group-hover:scale-105" 
+                className="w-full h-full object-cover object-top transition-transform duration-700 group-hover:scale-105 will-change-transform" 
                 loading="lazy"
                 decoding="async"
             />
@@ -1314,8 +1323,6 @@ const gameReducer = (state, action) => {
       return { ...initialGameState, gameActive: true, showBriefing: false, timeLeft: 15 };
     case 'END_GAME':
       return { ...state, gameActive: false, panicMode: false, targets: [] };
-    case 'SET_SCORE':
-      return { ...state, score: typeof action.payload === 'function' ? action.payload(state.score) : action.payload };
     case 'UPDATE_TIME':
       return { ...state, timeLeft: typeof action.payload === 'function' ? action.payload(state.timeLeft) : action.payload };
     case 'SET_PANIC':
@@ -1324,10 +1331,6 @@ const gameReducer = (state, action) => {
        return { ...state, targets: [...state.targets, action.payload] };
     case 'REMOVE_TARGET':
        return { ...state, targets: state.targets.filter(t => t.id !== action.payload) };
-    case 'SET_COMBO':
-        return { ...state, combo: typeof action.payload === 'function' ? action.payload(state.combo) : action.payload };
-    case 'SET_MULTIPLIER':
-        return { ...state, multiplier: typeof action.payload === 'function' ? action.payload(state.multiplier) : action.payload };
     case 'SET_VISUAL_EVENT':
         return { ...state, visualEvent: action.payload };
     case 'ADD_FEEDBACK':
@@ -1336,6 +1339,73 @@ const gameReducer = (state, action) => {
         return { ...state, clickFeedbacks: state.clickFeedbacks.filter(f => f.id !== action.payload) };
     case 'RETRY':
         return { ...initialGameState, showBriefing: true, score: 0 };
+    
+    // --- ATOMIC SCORE LOGIC ---
+    case 'TARGET_HIT': {
+        const { targetType, id, x, y } = action.payload;
+        let newScore = state.score;
+        let newTime = state.timeLeft;
+        let newCombo = state.combo;
+        let newMultiplier = state.multiplier;
+        let msg = "";
+        let color = "text-emerald-400";
+
+        // Logic based on state NOT closure
+        switch(targetType) {
+            case 'lead': 
+                newScore += 500 * state.multiplier;
+                msg = "+500 LEADS";
+                newCombo += 1;
+                break;
+            case 'golden_rocket': 
+                newScore += 15000 * state.multiplier;
+                msg = "VIRALITÈ MAX!";
+                color = "text-yellow-400";
+                newMultiplier += 1;
+                break;
+            case 'spam': 
+                newScore -= 5000;
+                msg = "BOTS DETECTED!";
+                color = "text-red-500";
+                newCombo = 0;
+                break;
+            case 'vip': 
+                newScore += 30000 * state.multiplier;
+                msg = "PARTENARIAT 👑";
+                color = "text-purple-400";
+                break;
+            case 'bad_buzz': 
+                newTime = Math.max(0, newTime - 3);
+                msg = "BAD BUZZ!";
+                color = "text-orange-600";
+                newCombo = 0;
+                break;
+            case 'clock': 
+                newTime += 1;
+                msg = "CONTENT STREAK! +1s";
+                color = "text-blue-400";
+                break;
+        }
+
+        const feedbackId = Math.random();
+        
+        return {
+            ...state,
+            score: newScore,
+            timeLeft: newTime,
+            combo: newCombo,
+            multiplier: newMultiplier,
+            targets: state.targets.filter(t => t.id !== id),
+            clickFeedbacks: [...state.clickFeedbacks, { id: feedbackId, x, y, msg, color }]
+        };
+    }
+    
+    case 'RESET_MULTIPLIER':
+        return { ...state, multiplier: Math.max(1, state.multiplier - 1) };
+
+    case 'REMOVE_FEEDBACK_BY_ID':
+        return { ...state, clickFeedbacks: state.clickFeedbacks.filter(f => f.id !== action.payload) };
+
     default:
       return state;
   }
@@ -1344,7 +1414,7 @@ const gameReducer = (state, action) => {
 const GrowthLabGameComp = memo(({ navigateTo, playSound, profileImageUrl, openChat, onSpell, t }) => {
   const [state, dispatch] = useReducer(gameReducer, initialGameState);
   const { gameActive, showBriefing, score, timeLeft, targets, clickFeedbacks, multiplier, combo, panicMode, visualEvent } = state;
-   
+    
   const lastFrameTime = useRef(0);
   const gameAreaRef = useRef(null);
   const visualUpdateRef = useRef(null);
@@ -1357,6 +1427,16 @@ const GrowthLabGameComp = memo(({ navigateTo, playSound, profileImageUrl, openCh
     transform: `scale(${1 + Math.min(combo * 0.1, 0.5)})`
   }), [combo]);
 
+  // Remove feedbacks automatically
+  useEffect(() => {
+      if (clickFeedbacks.length > 0) {
+          const timer = setTimeout(() => {
+              dispatch({ type: 'REMOVE_FEEDBACK_BY_ID', payload: clickFeedbacks[0].id });
+          }, 800);
+          return () => clearTimeout(timer);
+      }
+  }, [clickFeedbacks]);
+
   useEffect(() => {
     let animationFrame;
     let frameCount = 0;
@@ -1365,7 +1445,7 @@ const GrowthLabGameComp = memo(({ navigateTo, playSound, profileImageUrl, openCh
       lastFrameTime.current = performance.now();
       const updatePhysics = (time) => {
         frameCount++;
-        const shouldUpdateVisual = frameCount % 2 === 0;
+        const shouldUpdateVisual = frameCount % 2 === 0; // Throttle visual updates
 
         let dt = (time - lastFrameTime.current) / 16.66;
         if (dt > 4) dt = 1;
@@ -1397,7 +1477,6 @@ const GrowthLabGameComp = memo(({ navigateTo, playSound, profileImageUrl, openCh
               if (el) {
                 const deltaX = (t.x - t.initialX) / 100 * width;
                 const deltaY = (t.y - t.initialY) / 100 * height;
-                // Optimization: Use translate3d for GPU acceleration
                 el.style.transform = `translate3d(${deltaX}px, ${deltaY}px, 0)`;
               }
           }
@@ -1538,71 +1617,30 @@ const GrowthLabGameComp = memo(({ navigateTo, playSound, profileImageUrl, openCh
     const currentX = targetPhys ? targetPhys.x : 50;
     const currentY = targetPhys ? targetPhys.y : 50;
 
-    let points = 0; let timeBonus = 0; let msg = ""; let color = "text-emerald-400";
-    let newCombo = combo;
-    let newMultiplier = multiplier;
+    // Trigger atomic update inside reducer
+    dispatch({ type: 'TARGET_HIT', payload: { targetType: type, id, x: currentX, y: currentY } });
 
+    // Side effects (sound) still here
     switch(type) {
-      case 'lead': 
-        points = 500 * multiplier; 
-        msg = "+500 LEADS"; 
-        playSound(880 + (combo * 20)); 
-        newCombo = combo + 1;
-        dispatch({ type: 'SET_COMBO', payload: newCombo });
-        break;
+      case 'lead': playSound(880 + (combo * 20)); break;
       case 'golden_rocket': 
-        points = 15000 * multiplier; 
-        msg = "VIRALITÈ MAX!"; 
-        color = "text-yellow-400"; 
-        newMultiplier = multiplier + 1;
-        dispatch({ type: 'SET_MULTIPLIER', payload: newMultiplier }); 
         playSound(1300, 'square'); 
-        setTimeout(() => dispatch({ type: 'SET_MULTIPLIER', payload: prev => Math.max(1, prev - 1) }), 5000); 
+        setTimeout(() => dispatch({ type: 'RESET_MULTIPLIER' }), 5000); 
         break;
-      case 'spam': 
-        points = -5000; 
-        msg = "BOTS DETECTED!"; 
-        color = "text-red-500"; 
-        playSound(100, 'sawtooth'); 
-        dispatch({ type: 'SET_COMBO', payload: 0 });
-        break;
-      case 'vip': 
-        points = 30000 * multiplier; 
-        msg = "PARTENARIAT 👑"; 
-        color = "text-purple-400"; 
-        playSound(1800, 'triangle'); 
-        break;
-      case 'bad_buzz': 
-        timeBonus = -3; 
-        msg = "BAD BUZZ!"; 
-        color = "text-orange-600"; 
-        playSound(60, 'sawtooth'); 
-        dispatch({ type: 'SET_COMBO', payload: 0 });
-        break;
-      case 'clock': 
-        timeBonus = 1; 
-        msg = "CONTENT STREAK! +1s"; 
-        color = "text-blue-400"; 
-        playSound(1200); 
-        break;
+      case 'spam': playSound(100, 'sawtooth'); break;
+      case 'vip': playSound(1800, 'triangle'); break;
+      case 'bad_buzz': playSound(60, 'sawtooth'); break;
+      case 'clock': playSound(1200); break;
     }
-    const fId = Math.random();
-    dispatch({ type: 'ADD_FEEDBACK', payload: { id: fId, x: currentX, y: currentY, msg, color } });
-    setTimeout(() => dispatch({ type: 'REMOVE_FEEDBACK', payload: fId }), 800);
-    dispatch({ type: 'SET_SCORE', payload: prev => prev + points });
-      
-    if (timeBonus !== 0) {
-        dispatch({ type: 'UPDATE_TIME', payload: prev => Math.max(0, prev + timeBonus) });
-    }
-      
-    dispatch({ type: 'REMOVE_TARGET', payload: id });
+
+    // Physics cleanup
     targetsPhysics.current = targetsPhysics.current.filter(t => t.id !== id);
     delete targetElementsRef.current[id];
 
-  }, [multiplier, combo, playSound]);
+  }, [combo, playSound]);
 
   return (
-    <div className="pt-24 md:pt-40 pb-24 md:pb-40 px-6 font-black animate-reveal min-h-screen relative flex flex-col items-center justify-start overflow-hidden">
+    <div className="pt-24 md:pt-40 pb-24 md:pb-40 px-6 font-black animate-reveal min-h-screen relative flex flex-col items-center justify-start overflow-hidden cv-auto">
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,rgba(220,38,38,0.05)_0%,transparent_100%)] -z-10" />
         <div className="max-w-6xl w-full space-y-8 md:space-y-12 relative z-10 py-6 md:py-10 font-black">
             <div className="text-center space-y-4 md:space-y-6 mb-8 md:mb-12">
@@ -1706,7 +1744,7 @@ const GrowthLabGameComp = memo(({ navigateTo, playSound, profileImageUrl, openCh
                     </div>
                     ) : (
                     <>
-                        {clickFeedbacks.map(f => <div key={f.id} style={{ left: `${f.x}%`, top: `${f.y}%` }} className={`absolute pointer-events-none font-black text-xl md:text-3xl uppercase animate-float-out z-50 ${f.color} drop-shadow-[0_0_10px_rgba(0,0,0,1)]`}>{f.msg}</div>)}
+                        {clickFeedbacks.map(f => <div key={f.id} style={{ left: `${f.x}%`, top: `${f.y}%` }} className={`absolute pointer-events-none font-black text-xl md:text-3xl uppercase animate-float-out z-50 ${f.color} drop-shadow-[0_0_10px_rgba(0,0,0,1)] will-change-transform`}>{f.msg}</div>)}
                         {targets.map(t => {
                             const AssetComponent = t.type === 'lead' ? GameAssets.Lead : 
                                                    t.type === 'golden_rocket' ? GameAssets.GoldenRocket : 
@@ -1791,6 +1829,11 @@ const GrowthLabGameComp = memo(({ navigateTo, playSound, profileImageUrl, openCh
   );
 });
 
+// SIMULATION LAZY LOAD POUR FICHIER UNIQUE (Evite le chargement au mount)
+const LazyGame = lazy(() => new Promise(resolve => {
+  setTimeout(() => resolve({ default: GrowthLabGameComp }), 0);
+}));
+
 const MainContent = memo(({ view, profileImageUrl, t, experiences, stackData, testimonials, navigateTo, openChat, playSound, handleDownload, triggerSpell, openModal, copyDiscord, copyFeedback, sayHello }) => {
     return (
         <main className="animate-reveal">
@@ -1817,7 +1860,7 @@ const MainContent = memo(({ view, profileImageUrl, t, experiences, stackData, te
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8 md:gap-12">
                   {stackData.map((skill, i) => (
-                    <div key={skill.name} onClick={() => openModal('skill', skill)} className={`group/skill p-8 md:p-12 rounded-[4rem] md:rounded-[5rem] border border-white/5 bg-slate-900/40 hover:bg-red-600 hover:border-red-600 transition-colors duration-300 cursor-pointer flex flex-col gap-8 md:gap-12 animate-reveal shadow-2xl transform-gpu`}>
+                    <div key={skill.name} onClick={() => openModal('skill', skill)} className={`group/skill p-8 md:p-12 rounded-[4rem] md:rounded-[5rem] border border-white/5 bg-slate-900/40 hover:bg-red-600 hover:border-red-600 transition-colors duration-300 cursor-pointer flex flex-col gap-8 md:gap-12 animate-reveal shadow-2xl transform-gpu will-change-transform`}>
                       <div className="w-fit p-6 md:p-7 rounded-[2rem] bg-black text-red-500 group-hover:bg-white group-hover:text-red-600 transition-colors duration-300 shadow-xl font-black"><skill.icon size={32} className="md:w-10 md:h-10" /></div>
                       <div className="space-y-3 md:space-y-4">
                         <p className={`text-[9px] md:text-[10px] font-black uppercase tracking-[0.4em] text-red-500/80 group-hover:text-white/80 font-black`}>{skill.category}</p>
@@ -1827,7 +1870,6 @@ const MainContent = memo(({ view, profileImageUrl, t, experiences, stackData, te
                   ))}
                 </div>
               </div>
-              {/* Decorative bar removed as requested */}
             </section>
 
             <Experiences experiences={experiences} onSpell={triggerSpell} t={t.exp} />
@@ -1861,7 +1903,9 @@ const MainContent = memo(({ view, profileImageUrl, t, experiences, stackData, te
         )}
 
         {view === 'play' && (
-          <GrowthLabGameComp navigateTo={navigateTo} playSound={playSound} profileImageUrl={profileImageUrl} openChat={openChat} onSpell={triggerSpell} t={t.game} />
+            <Suspense fallback={<div className="h-screen w-full flex items-center justify-center bg-black"><div className="animate-spin text-red-600"><Target size={40} /></div></div>}>
+                <LazyGame navigateTo={navigateTo} playSound={playSound} profileImageUrl={profileImageUrl} openChat={openChat} onSpell={triggerSpell} t={t.game} />
+            </Suspense>
         )}
         </main>
     );
@@ -1869,7 +1913,6 @@ const MainContent = memo(({ view, profileImageUrl, t, experiences, stackData, te
 
 const App = () => {
   const [view, setView] = useState('home'); 
-  const [scrolled, setScrolled] = useState(false);
   const [modalType, setModalType] = useState(null); 
   const [selectedData, setSelectedData] = useState(null);
   const [isChatOpen, setIsChatOpen] = useState(false);
@@ -1880,6 +1923,8 @@ const App = () => {
   const [isMuted, setIsMuted] = useState(false);
   
   const [foundSecrets, setFoundSecrets] = useState([]);
+
+  useGlobalStyles(); // Injection unique des styles
 
   useEffect(() => {
     let keys = [];
@@ -1899,7 +1944,7 @@ const App = () => {
 
   const profileImageUrl = "https://res.cloudinary.com/dex721lje/image/upload/f_auto,q_auto,w_800/v1740686437/photo_de_profil_kvhg3h.png"; 
 
-  const t = TEXTS[lang];
+  const t = useMemo(() => TEXTS[lang], [lang]);
   const experiences = useMemo(() => getExperiences(lang), [lang]);
   const stackData = useMemo(() => getStack(lang), [lang]);
   const testimonials = useMemo(() => getTestimonials(lang), [lang]);
@@ -1919,7 +1964,6 @@ const App = () => {
       gain.connect(ctx.destination);
       osc.start();
       osc.stop(ctx.currentTime + duration);
-      // Fix: Cleanup to prevent memory leaks and popping sounds
       osc.onended = () => {
           osc.disconnect();
           gain.disconnect();
@@ -1945,7 +1989,10 @@ const App = () => {
 
   const navigateTo = useCallback((newView) => {
     setView(newView);
-    window.scrollTo({ top: 0, behavior: 'instant' });
+    // Defer scrollTo to next frame to prevent layout thrashing
+    requestAnimationFrame(() => {
+        window.scrollTo({ top: 0, behavior: 'auto' });
+    });
   }, []);
 
   const triggerSpell = useCallback((spellType) => {
@@ -1968,8 +2015,6 @@ const App = () => {
         } else if (spellType === 'longpress') {
             playSound(400, 'sine', 1);
             spellData.text = "Vous avez trouvé le secret de la persévérance. Parfois, il suffit de tenir bon pour voir le résultat.";
-        } else if (spellType === 'cv_download') {
-            // Removed as requested
         } else if (spellType === 'highscore') {
             playSound(800, 'square', 1);
             spellData.text = "Score incroyable ! Vous avez l'étoffe d'un Growth Hacker.";
@@ -2048,22 +2093,6 @@ const App = () => {
   }, [playSound, t, showToast]);
 
   useEffect(() => {
-    let ticking = false;
-    const handleScroll = () => {
-      if (!ticking) {
-          window.requestAnimationFrame(() => {
-              const isScrolled = window.scrollY > 20;
-              setScrolled(prev => prev !== isScrolled ? isScrolled : prev);
-              ticking = false;
-          });
-          ticking = true;
-      }
-    };
-    window.addEventListener('scroll', handleScroll, { passive: true });
-    return () => window.removeEventListener('scroll', handleScroll);
-  }, []);
-
-  useEffect(() => {
     document.title = "Lucien Lukes - Portfolio";
     
     const setFavicon = () => {
@@ -2126,8 +2155,7 @@ const App = () => {
         <p>Expert en management de créateurs de contenu et scaling infrastructure.</p>
       </div>
 
-      <Navbar scrolled={scrolled} view={view} navigateTo={navigateTo} openChat={openChat} lang={lang} setLang={setLang} t={t.nav} isMuted={isMuted} toggleMute={toggleMute} />
-      {/* ScrollProgress removed as requested */}
+      <Navbar view={view} navigateTo={navigateTo} openChat={openChat} lang={lang} setLang={setLang} t={t.nav} isMuted={isMuted} toggleMute={toggleMute} />
 
       <MainContent 
         view={view}
@@ -2183,8 +2211,6 @@ const App = () => {
       </Modal>
 
       {isChatOpen && <CollaborationForm onClose={() => setIsChatOpen(false)} playSound={playSound} t={t.form} stackData={stackData} questCompleted={foundSecrets.length >= 4} />}
-
-      <style>{GLOBAL_STYLES}</style>
     </div>
   );
 };
