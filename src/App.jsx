@@ -13,7 +13,7 @@ import {
   HelpCircle, Check, Unlock, MousePointer2, Keyboard, Fingerprint, FileText, Crosshair, ListTodo, Info, XCircle
 } from 'lucide-react';
 
-// --- CONFIGURATION SYSTÈME SONORE ---
+// --- CONFIGURATION SYSTÈME SONORE OPTIMISÉE ---
 const audioSystem = {
   ctx: null,
   get() {
@@ -28,32 +28,39 @@ const audioSystem = {
   }
 };
 
-// --- HOOK OPTIMISATION: INTERSECTION OBSERVER ---
-const useInView = (ref, options = {}) => {
+// --- HOOK OPTIMISATION: STABLE INTERSECTION OBSERVER ---
+const useInView = (ref, { threshold = 0.1, rootMargin = '0px' } = {}) => {
   const [isInView, setIsInView] = useState(false);
+  
   useEffect(() => {
     if (!ref.current) return;
+    
     const observer = new IntersectionObserver(([entry]) => {
-      setIsInView(entry.isIntersecting);
-    }, { threshold: 0.1, ...options });
+      // Guard : mise à jour uniquement si la valeur change
+      setIsInView(prev => (prev === entry.isIntersecting ? prev : entry.isIntersecting));
+    }, { threshold, rootMargin });
+    
     observer.observe(ref.current);
+    
     return () => {
-        if (ref.current) observer.unobserve(ref.current);
+      observer.disconnect();
     };
-  }, [ref, options]);
+    // Ref retirée des dépendances pour stabilité
+  }, [threshold, rootMargin]);
+  
   return isInView;
 };
 
-// --- GAME ASSETS ---
+// --- GAME ASSETS (MEMOIZED) ---
 const GameAssets = {
-  Lead: () => (
+  Lead: memo(() => (
     <svg viewBox="0 0 100 100" className="w-full h-full drop-shadow-[0_0_10px_rgba(56,189,248,0.8)]">
       <circle cx="50" cy="50" r="45" fill="rgba(6,182,212,0.1)" stroke="#06b6d4" strokeWidth="2" />
       <circle cx="50" cy="50" r="25" fill="#06b6d4" className="animate-pulse" />
       <path d="M25,80 Q50,50 75,80" fill="#fff" />
     </svg>
-  ),
-  GoldenRocket: () => (
+  )),
+  GoldenRocket: memo(() => (
     <svg viewBox="0 0 100 100" className="w-full h-full drop-shadow-[0_0_15px_rgba(234,179,8,0.8)]">
       <defs>
         <linearGradient id="goldGrad" x1="0%" y1="0%" x2="100%" y2="100%">
@@ -65,8 +72,8 @@ const GameAssets = {
       <path d="M30,70 Q10,90 30,95" stroke="#ca8a04" strokeWidth="3" fill="none" />
       <path d="M70,70 Q90,90 70,95" stroke="#ca8a04" strokeWidth="3" fill="none" />
     </svg>
-  ),
-  Partner: () => (
+  )),
+  Partner: memo(() => (
     <svg viewBox="0 0 100 100" className="w-full h-full drop-shadow-[0_0_15px_rgba(168,85,247,0.8)]">
       <defs>
         <linearGradient id="purpGrad" x1="0%" y1="0%" x2="0%" y2="100%">
@@ -77,35 +84,39 @@ const GameAssets = {
       <path d="M20,70 L20,40 L40,60 L50,20 L60,60 L80,40 L80,70 Z" fill="url(#purpGrad)" stroke="#fff" strokeWidth="2" />
       <circle cx="50" cy="15" r="5" fill="#fff" className="animate-ping" style={{animationDelay: '0.2s'}} />
     </svg>
-  ),
-  Bot: () => (
+  )),
+  Bot: memo(() => (
     <svg viewBox="0 0 100 100" className="w-full h-full drop-shadow-[0_0_10px_rgba(239,68,68,0.8)]">
       <rect x="25" y="25" width="50" height="50" rx="10" fill="#7f1d1d" stroke="#ef4444" strokeWidth="3" />
       <circle cx="40" cy="45" r="5" fill="#000" />
       <circle cx="60" cy="45" r="5" fill="#000" />
       <rect x="35" y="60" width="30" height="5" fill="#000" />
     </svg>
-  ),
-  BadBuzz: () => (
+  )),
+  BadBuzz: memo(() => (
     <svg viewBox="0 0 100 100" className="w-full h-full drop-shadow-[0_0_10px_rgba(249,115,22,0.8)]">
       <path d="M50,15 Q70,40 80,60 Q90,90 50,90 Q10,90 20,60 Q30,40 50,15" fill="#c2410c" stroke="#f97316" strokeWidth="2" />
       <path d="M50,25 Q60,45 65,60 Q70,80 50,80 Q30,80 35,60 Q40,45 50,25" fill="#fb923c" />
     </svg>
-  ),
-  Streak: () => (
+  )),
+  Streak: memo(() => (
     <svg viewBox="0 0 100 100" className="w-full h-full drop-shadow-[0_0_10px_rgba(59,130,246,0.8)]">
       <circle cx="50" cy="50" r="40" fill="rgba(29,78,216,0.2)" stroke="#3b82f6" strokeWidth="3" strokeDasharray="10 5" />
       <path d="M40,10 L50,0 L60,10" fill="none" stroke="#3b82f6" strokeWidth="2" className="animate-bounce" />
     </svg>
-  )
+  ))
 };
 
-// --- STYLES GLOBAUX ---
+// --- STYLES GLOBAUX OPTIMISÉS ---
 const GLOBAL_STYLES = `
   @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&display=swap');
   :root { scroll-behavior: smooth; }
   body { font-family: 'Inter', sans-serif; background: #020202; overflow-x: hidden; touch-action: pan-y; }
    
+  /* Classes utilitaires pour la performance */
+  .cv-auto { content-visibility: auto; contain-intrinsic-size: 1px 1000px; }
+  .gpu-accel { transform: translate3d(0,0,0); }
+  
   @media (prefers-reduced-motion: no-preference) {
     .animate-pulse, .animate-bounce, .animate-spin-slow {
       animation-play-state: running;
@@ -113,7 +124,7 @@ const GLOBAL_STYLES = `
   }
   
   .animate-pulse, .animate-bounce, .animate-float, .animate-spin-slow {
-    will-change: auto;
+    will-change: transform, opacity;
   }
   
   .animate-pulse:hover, .animate-bounce:hover {
@@ -149,7 +160,7 @@ const GLOBAL_STYLES = `
   .animate-wave { animation: wave 2s infinite; }
   .animate-quick-pop { animation: quick-pop 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards; }
    
-  .will-change-pos { will-change: left, top; }
+  .will-change-pos { will-change: transform; }
    
   @media (min-width: 768px) {
     .animate-float { animation: float 6s ease-in-out infinite; }
@@ -163,17 +174,17 @@ const GLOBAL_STYLES = `
     }
   }
 
-  @keyframes reveal { from { opacity: 0; transform: translateY(15px); } to { opacity: 1; transform: translateY(0); } }
-  @keyframes reveal-bottom { from { opacity: 0; transform: translateY(50px); } to { opacity: 1; transform: translateY(0); } }
-  @keyframes slide-in-right { from { opacity: 0; transform: translateX(30px); } to { opacity: 1; transform: translateX(0); } }
+  @keyframes reveal { from { opacity: 0; transform: translate3d(0, 15px, 0); } to { opacity: 1; transform: translate3d(0, 0, 0); } }
+  @keyframes reveal-bottom { from { opacity: 0; transform: translate3d(0, 50px, 0); } to { opacity: 1; transform: translate3d(0, 0, 0); } }
+  @keyframes slide-in-right { from { opacity: 0; transform: translate3d(30px, 0, 0); } to { opacity: 1; transform: translate3d(0, 0, 0); } }
   @keyframes stress { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.01); border-color: #dc2626; } }
   @keyframes shake { 10%, 90% { transform: translate3d(-1px, 0, 0); } 20%, 80% { transform: translate3d(2px, 0, 0); } 30%, 50%, 70% { transform: translate3d(-4px, 0, 0); } 40%, 60% { transform: translate3d(4px, 0, 0); } }
   @keyframes float-out { from { opacity: 1; transform: translateY(0) scale(1); } to { opacity: 0; transform: translateY(-100px) scale(1.2); } }
   @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
-  @keyframes fade-in-up { from { opacity: 0; transform: translateY(30px); } to { opacity: 1; transform: translateY(0); } }
+  @keyframes fade-in-up { from { opacity: 0; transform: translate3d(0, 30px, 0); } to { opacity: 1; transform: translate3d(0, 0, 0); } }
   @keyframes lumos-text { 0% { opacity: 0; letter-spacing: 1em; filter: blur(10px); } 100% { opacity: 1; letter-spacing: 0; filter: blur(0); } }
-  @keyframes shimmer-fast { from { transform: translateX(-100%); } to { transform: translateX(100%); } }
-  @keyframes scroll-normal { from { transform: translateX(0); } to { transform: translateX(-33.33%); } }
+  @keyframes shimmer-fast { from { transform: translate3d(-100%, 0, 0); } to { transform: translate3d(100%, 0, 0); } }
+  @keyframes scroll-normal { from { transform: translate3d(0, 0, 0); } to { transform: translate3d(-33.33%, 0, 0); } }
   @keyframes wave { 0% { transform: rotate(0deg); } 10% { transform: rotate(14deg); } 20% { transform: rotate(-8deg); } 30% { transform: rotate(14deg); } 40% { transform: rotate(-4deg); } 50% { transform: rotate(10deg); } 60% { transform: rotate(0deg); } 100% { transform: rotate(0deg); } }
   @keyframes quick-pop { from { opacity: 0; transform: scale(0.95); } to { opacity: 1; transform: scale(1); } }
   @keyframes confetti-fall { 0% { background-position: 0 0; } 100% { background-position: 100px 1000px; } }
@@ -659,7 +670,7 @@ const TestimonialsSection = memo(({ testimonials, t }) => {
   const isVisible = useInView(containerRef);
 
   return (
-    <section ref={containerRef} className={`py-16 md:py-40 px-6 relative font-black border-t border-white/5 ${isVisible ? 'opacity-100' : 'opacity-0'} transition-opacity duration-1000`} style={{ contain: 'layout paint' }}>
+    <section ref={containerRef} className={`py-16 md:py-40 px-6 relative font-black border-t border-white/5 ${isVisible ? 'opacity-100' : 'opacity-0'} transition-opacity duration-1000 cv-auto`}>
       <div className="max-w-7xl mx-auto space-y-12 md:space-y-24">
         <div className="text-center space-y-4">
           <p className="text-red-500 font-black uppercase text-[10px] md:text-[11px] tracking-[0.8em]">{t.sub}</p>
@@ -931,14 +942,16 @@ const HeroSection = memo(({ openChat, playSound, profileImageUrl, t, handleDownl
               <div className="absolute inset-0 bg-gradient-to-t from-black via-transparent to-transparent z-10 opacity-40" />
               <img 
                   src={profileImageUrl} 
+                  srcSet={`${profileImageUrl}?w=400 400w, ${profileImageUrl}?w=800 800w, ${profileImageUrl}?w=1200 1200w`}
+                  sizes="(max-width: 768px) 100vw, 50vw"
                   alt="Lucien Lukes Freelance Marketing Montpellier France" 
                   className="w-full h-full object-cover object-top brightness-110 contrast-105" 
-                  loading="eager"
+                  loading="lazy"
                   decoding="async"
               />
             </div>
             
-            {/* BULLE EXPÉRIENCE - En haut, décalée à droite, hors cadre */}
+            {/* BULLE EXPÉRIENCE */}
             <div className="absolute -top-12 right-8 z-50 animate-float bg-black/80 backdrop-blur-md border border-white/5 p-3 pr-5 rounded-full flex items-center gap-3 shadow-xl">
                   <div className="bg-red-600/20 p-2 rounded-full text-red-500"><Trophy size={16} /></div>
                   <div>
@@ -947,7 +960,7 @@ const HeroSection = memo(({ openChat, playSound, profileImageUrl, t, handleDownl
                   </div>
             </div>
 
-            {/* BULLE SUCCÈS - En bas, décalée à gauche, hors cadre */}
+            {/* BULLE SUCCÈS */}
             <div className="absolute -bottom-12 left-8 z-50 animate-float animation-delay-2000 bg-black/80 backdrop-blur-md border border-white/5 p-3 pr-5 rounded-full flex items-center gap-3 shadow-xl">
                   <div className="bg-emerald-500/20 p-2 rounded-full text-emerald-500"><CheckCircle size={16} /></div>
                   <div>
@@ -958,8 +971,6 @@ const HeroSection = memo(({ openChat, playSound, profileImageUrl, t, handleDownl
 
           </div>
         </div>
-        
-        {/* Scroll indicator removed as requested */}
       </section>
     );
 });
@@ -970,52 +981,73 @@ const Experiences = memo(({ experiences, onSpell, t }) => {
   const isVisible = useInView(containerRef);
 
   useEffect(() => {
-    let rafId;
+    let ticking = false;
     let containerRect = { top: 0, height: 0 };
-       
+    let resizeTimer; // For debounce
+    
+    // Initial measure
     const updateMetrics = () => {
-        if(containerRef.current) {
-            const r = containerRef.current.getBoundingClientRect();
-            const scrollTop = window.scrollY || document.documentElement.scrollTop;
-            containerRect = { 
-                top: r.top + scrollTop, 
-                height: r.height 
-            };
-        }
+      if (containerRef.current) {
+        const r = containerRef.current.getBoundingClientRect();
+        const scrollTop = window.scrollY || document.documentElement.scrollTop;
+        containerRect = { top: r.top + scrollTop, height: r.height };
+      }
+    };
+    
+    const onScroll = () => {
+      if (!ticking) {
+        window.requestAnimationFrame(() => {
+          if (!progressRef.current || containerRect.height === 0) {
+            ticking = false;
+            return;
+          }
+          
+          const scrollY = window.scrollY;
+          const startOffset = window.innerHeight / 2;
+          const triggerPoint = containerRect.top - startOffset;
+          
+          let progress = (scrollY - triggerPoint) / containerRect.height;
+          progress = Math.max(0, Math.min(progress, 1));
+          
+          // GPU Optimization with translateZ
+          progressRef.current.style.transform = `scaleY(${progress}) translateZ(0)`;
+          
+          ticking = false;
+        });
+        ticking = true;
+      }
     };
 
-    window.addEventListener('resize', updateMetrics, { passive: true });
-    updateMetrics(); 
+    // Initial setup sequence
+    requestAnimationFrame(() => {
+        updateMetrics();
+        onScroll();
+    });
 
-    const updateScroll = () => {
-        if (!progressRef.current || containerRect.height === 0) return;
-        
-        const scrollY = window.scrollY;
-        
-        const startOffset = window.innerHeight / 2;
-        const triggerPoint = containerRect.top - startOffset;
-        
-        let progress = (scrollY - triggerPoint) / containerRect.height;
-        progress = Math.max(0, Math.min(progress, 1));
-        
-        progressRef.current.style.transform = `scaleY(${progress}) translateZ(0)`;
+    const onResizeOrOrientation = () => {
+       clearTimeout(resizeTimer);
+       resizeTimer = setTimeout(() => {
+           requestAnimationFrame(() => {
+               updateMetrics();
+               onScroll();
+           });
+       }, 200); // 200ms debounce
     };
 
-    const handleScroll = () => {
-        cancelAnimationFrame(rafId);
-        rafId = requestAnimationFrame(updateScroll);
-    };
-
-    window.addEventListener('scroll', handleScroll, { passive: true });
+    window.addEventListener('scroll', onScroll, { passive: true });
+    window.addEventListener('resize', onResizeOrOrientation, { passive: true });
+    window.addEventListener('orientationchange', onResizeOrOrientation, { passive: true });
+    
     return () => {
-        window.removeEventListener('scroll', handleScroll);
-        window.removeEventListener('resize', updateMetrics);
-        cancelAnimationFrame(rafId);
+        window.removeEventListener('scroll', onScroll);
+        window.removeEventListener('resize', onResizeOrOrientation);
+        window.removeEventListener('orientationchange', onResizeOrOrientation);
+        clearTimeout(resizeTimer);
     }
   }, []);
 
   return (
-    <section id="missions" ref={containerRef} className={`py-16 md:py-32 px-6 relative font-black ${isVisible ? 'opacity-100' : 'opacity-0'} transition-opacity duration-1000`} style={{ contain: 'layout paint' }}>
+    <section id="missions" ref={containerRef} className={`py-16 md:py-32 px-6 relative font-black ${isVisible ? 'opacity-100' : 'opacity-0'} transition-opacity duration-1000 cv-auto`}>
       <div className="absolute top-0 left-0 w-full h-full bg-gradient-to-b from-transparent via-red-600/5 to-transparent -z-10" />
       <div className="max-w-6xl mx-auto space-y-12 md:space-y-32">
         <div className="text-center space-y-6">
@@ -1024,7 +1056,7 @@ const Experiences = memo(({ experiences, onSpell, t }) => {
         </div>
         <div className="relative space-y-12 md:space-y-32 text-left">
           <div className="absolute left-[31px] md:left-1/2 top-0 bottom-0 w-[4px] bg-white/5 hidden md:block overflow-hidden rounded-full shadow-inner font-black">
-              <div ref={progressRef} className="absolute top-0 left-0 w-full h-full bg-gradient-to-b from-red-600 via-orange-500 to-red-400 origin-top font-black" style={{ transform: 'scaleY(0) translateZ(0)' }} />
+              <div ref={progressRef} className="absolute top-0 left-0 w-full h-full bg-gradient-to-b from-red-600 via-orange-500 to-red-400 origin-top font-black gpu-accel" style={{ transform: 'scaleY(0) translateZ(0)' }} />
           </div>
 
           {experiences.map((exp, i) => (
@@ -1077,7 +1109,7 @@ const Experiences = memo(({ experiences, onSpell, t }) => {
 });
 
 const CursusSectionComp = memo(({ t }) => (
-  <div className="grid grid-cols-1 md:grid-cols-2 gap-8 md:gap-12 text-left font-black">
+  <div className="grid grid-cols-1 md:grid-cols-2 gap-8 md:gap-12 text-left font-black cv-auto">
     <div className="group relative p-8 md:p-12 bg-slate-900/40 border border-emerald-500/20 rounded-[3rem] md:rounded-[4rem] transition-all hover:bg-slate-900 shadow-2xl overflow-hidden font-black">
       <GraduationCap size={40} className="text-emerald-500 mb-6 md:mb-8 relative z-10" />
       <h4 className="text-white font-black text-2xl md:text-3xl uppercase tracking-tighter leading-none relative z-10">{t.dc.title}</h4>
@@ -1106,7 +1138,7 @@ const SectionBio = memo(({ profileImageUrl, navigateTo, copyDiscord, copyFeedbac
   const isVisible = useInView(containerRef);
 
   return (
-  <div ref={containerRef} className={`pt-24 md:pt-40 pb-16 md:pb-24 px-6 ${isVisible ? 'animate-reveal' : 'opacity-0'} font-black`}>
+  <div ref={containerRef} className={`pt-24 md:pt-40 pb-16 md:pb-24 px-6 ${isVisible ? 'animate-reveal' : 'opacity-0'} font-black cv-auto`}>
     <div className="max-w-7xl mx-auto">
       <div className="mb-12 md:mb-20 space-y-6">
         <p className="text-red-500 font-black uppercase text-[11px] tracking-[1em] animate-fade-in-up">{t.sub}</p>
@@ -1120,6 +1152,8 @@ const SectionBio = memo(({ profileImageUrl, navigateTo, copyDiscord, copyFeedbac
             <div className="absolute inset-0 bg-gradient-to-t from-red-900/40 via-transparent to-transparent z-10 opacity-60"></div>
             <img 
                 src={profileImageUrl} 
+                srcSet={`${profileImageUrl}?w=400 400w, ${profileImageUrl}?w=800 800w, ${profileImageUrl}?w=1200 1200w`}
+                sizes="(max-width: 768px) 100vw, 50vw"
                 alt="Consultant influence marketing & Freelance marketing France" 
                 className="w-full h-full object-cover object-top transition-transform duration-700 group-hover:scale-105" 
                 loading="lazy"
@@ -1296,6 +1330,11 @@ const GrowthLabGameComp = memo(({ navigateTo, playSound, profileImageUrl, openCh
   const targetsPhysics = useRef([]);
   const targetElementsRef = useRef({});
 
+  // Memoize score scaling style
+  const scoreStyle = useMemo(() => ({
+    transform: `scale(${1 + Math.min(combo * 0.1, 0.5)})`
+  }), [combo]);
+
   useEffect(() => {
     let animationFrame;
     let frameCount = 0;
@@ -1336,7 +1375,8 @@ const GrowthLabGameComp = memo(({ navigateTo, playSound, profileImageUrl, openCh
               if (el) {
                 const deltaX = (t.x - t.initialX) / 100 * width;
                 const deltaY = (t.y - t.initialY) / 100 * height;
-                el.style.transform = `translate(${deltaX}px, ${deltaY}px)`;
+                // Optimization: Use translate3d for GPU acceleration
+                el.style.transform = `translate3d(${deltaX}px, ${deltaY}px, 0)`;
               }
           }
         });
@@ -1540,7 +1580,7 @@ const GrowthLabGameComp = memo(({ navigateTo, playSound, profileImageUrl, openCh
   }, [multiplier, combo, playSound]);
 
   return (
-    <div className="pt-24 md:pt-40 pb-24 md:pb-40 px-6 font-black animate-reveal min-h-screen relative flex flex-col items-center justify-start overflow-y-auto">
+    <div className="pt-24 md:pt-40 pb-24 md:pb-40 px-6 font-black animate-reveal min-h-screen relative flex flex-col items-center justify-start overflow-hidden">
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,rgba(220,38,38,0.05)_0%,transparent_100%)] -z-10" />
         <div className="max-w-6xl w-full space-y-8 md:space-y-12 relative z-10 py-6 md:py-10 font-black">
             <div className="text-center space-y-4 md:space-y-6 mb-8 md:mb-12">
@@ -1565,7 +1605,7 @@ const GrowthLabGameComp = memo(({ navigateTo, playSound, profileImageUrl, openCh
                         </div>
                         <div className="px-6 py-4 md:px-10 md:py-6 rounded-3xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-500 shadow-3xl min-w-[160px] md:min-w-[240px]">
                         <p className="text-[9px] md:text-[10px] font-black uppercase tracking-[0.4em] opacity-60 text-nowrap">{t.eng}</p>
-                        <p className="text-2xl md:text-4xl font-black tabular-nums leading-none mt-1 md:mt-2 transition-all duration-200" style={{ transform: `scale(${1 + Math.min(combo * 0.1, 0.5)})` }}>{formatScore(score)}</p>
+                        <p className="text-2xl md:text-4xl font-black tabular-nums leading-none mt-1 md:mt-2 transition-all duration-200" style={scoreStyle}>{formatScore(score)}</p>
                         </div>
                     </div>
                     )}
@@ -1744,7 +1784,7 @@ const MainContent = memo(({ view, profileImageUrl, t, experiences, stackData, te
             />
             <TrustStrip lang={'fr'} t={t.trust} />
             
-            <section className="py-12 md:py-24 px-6 text-left relative content-auto" style={{ contain: 'layout paint' }}>
+            <section className="py-12 md:py-24 px-6 text-left relative cv-auto">
               <div className="max-w-7xl mx-auto space-y-16 md:space-y-32">
                 <div className="flex flex-col md:flex-row justify-between items-end gap-6 md:gap-10">
                   <div className="space-y-3 md:space-y-4">
@@ -1770,7 +1810,7 @@ const MainContent = memo(({ view, profileImageUrl, t, experiences, stackData, te
 
             <Experiences experiences={experiences} onSpell={triggerSpell} t={t.exp} />
 
-            <section className="py-24 md:py-48 px-6 bg-black/80 md:backdrop-blur-3xl font-black relative content-auto" style={{ contain: 'layout paint' }}>
+            <section className="py-24 md:py-48 px-6 bg-black/80 md:backdrop-blur-3xl font-black relative cv-auto">
                <div className="max-w-6xl mx-auto text-center">
                   <div className="mb-20 md:mb-32 space-y-4 md:space-y-6"><p className="text-red-500 uppercase text-[10px] md:text-[11px] tracking-[1em]">{t.cursus.sub}</p><h3 className="text-5xl md:text-7xl lg:text-[90px] font-black text-white uppercase tracking-tighter italic opacity-95 leading-none">{t.cursus.title}</h3></div>
                   <CursusSectionComp t={t.cursus} />
@@ -1857,6 +1897,11 @@ const App = () => {
       gain.connect(ctx.destination);
       osc.start();
       osc.stop(ctx.currentTime + duration);
+      // Fix: Cleanup to prevent memory leaks and popping sounds
+      osc.onended = () => {
+          osc.disconnect();
+          gain.disconnect();
+      }
     } catch (e) {}
   }, [isMuted]);
 
