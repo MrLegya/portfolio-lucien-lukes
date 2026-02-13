@@ -36,7 +36,6 @@ const useInView = (ref, { threshold = 0.1, rootMargin = '0px' } = {}) => {
     if (!ref.current) return;
     
     const observer = new IntersectionObserver(([entry]) => {
-      // Guard : mise à jour uniquement si la valeur change
       setIsInView(prev => (prev === entry.isIntersecting ? prev : entry.isIntersecting));
     }, { threshold, rootMargin });
     
@@ -45,7 +44,6 @@ const useInView = (ref, { threshold = 0.1, rootMargin = '0px' } = {}) => {
     return () => {
       observer.disconnect();
     };
-    // Ref retirée des dépendances pour stabilité
   }, [threshold, rootMargin]);
   
   return isInView;
@@ -109,7 +107,7 @@ const GameAssets = {
 
 // --- STYLES GLOBAUX OPTIMISÉS ---
 const GLOBAL_STYLES = `
-  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&display=swap');
+  /* Police gérée dans index.html pour éviter le blocage du rendu */
   :root { scroll-behavior: smooth; }
   body { font-family: 'Inter', sans-serif; background: #020202; overflow-x: hidden; touch-action: pan-y; }
    
@@ -123,6 +121,30 @@ const GLOBAL_STYLES = `
     }
   }
   
+  /* --- MOBILE PERF MODE (<768px) --- */
+  @media (max-width: 768px) {
+    .animate-spin-slow, .animate-float, .animate-shimmer-fast, .animate-pulse, .animate-bounce, .animate-wave, .animate-scroll-normal {
+      animation: none !important;
+      transform: none !important;
+      transition: none !important;
+    }
+    
+    /* Désactivation des effets coûteux sur mobile */
+    .shadow-glow-red, .shadow-glow-emerald, .shadow-glow-white, .shadow-glow-yellow, .shadow-glow-purple {
+      box-shadow: none !important;
+    }
+    
+    .backdrop-blur-md, .backdrop-blur-3xl {
+      backdrop-filter: none !important;
+      -webkit-backdrop-filter: none !important;
+      background-color: rgba(10, 10, 10, 0.95) !important; /* Fallback opaque */
+    }
+    
+    .digital-grid {
+      display: none !important; /* Moins de paint */
+    }
+  }
+
   .animate-pulse, .animate-bounce, .animate-float, .animate-spin-slow {
     will-change: transform, opacity;
   }
@@ -142,7 +164,6 @@ const GLOBAL_STYLES = `
   }
   
   .animate-reveal, .animate-fade-in-up, .animate-slide-in-right {
-    /* Suppression du contain pour éviter le double scroll */
     animation-fill-mode: forwards;
   }
 
@@ -994,6 +1015,7 @@ const Experiences = memo(({ experiences, onSpell, t }) => {
       }
     };
     
+    // Optimized scroll handler (ticking)
     const onScroll = () => {
       if (!ticking) {
         window.requestAnimationFrame(() => {
