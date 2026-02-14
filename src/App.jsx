@@ -1,5 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback, memo, useMemo, useReducer, Suspense, lazy, createElement, useLayoutEffect } from 'react';
-import { createRoot } from 'react-dom/client';
+import React, { useState, useEffect, useRef, useCallback, memo, useMemo, useReducer, useLayoutEffect } from 'react';
 import { 
   Rocket, Users, Target, Mail, Gamepad2, Zap, ArrowRight,
   Search, Share2, MessageCircle, Cpu, Layers, 
@@ -54,18 +53,18 @@ const useInView = (ref, { threshold = 0.1, rootMargin = '0px', triggerOnce = tru
     return () => {
       observer.disconnect();
     };
-  }, [threshold, rootMargin, triggerOnce]); // Depend only on stable config
+  }, [threshold, rootMargin, triggerOnce]);
   
   return isInView;
 };
 
-// --- STYLES GLOBAUX (INJECTION VIA HEAD) ---
+// --- STYLES GLOBAUX OPTIMISÉS ---
 const GLOBAL_STYLES_STRING = `
   :root { scroll-behavior: smooth; }
   body { font-family: 'Inter', sans-serif; background: #020202; overflow-x: hidden; touch-action: pan-y; margin: 0; padding: 0; }
     
   /* Performance Utilities */
-  .cv-auto { content-visibility: auto; contain-intrinsic-size: 1px 1000px; }
+  /* cv-auto removed from critical sections */
   .gpu-accel { transform: translate3d(0,0,0); backface-visibility: hidden; perspective: 1000px; }
   .will-change-transform { will-change: transform; }
   .will-change-opacity { will-change: opacity; }
@@ -93,35 +92,34 @@ const GLOBAL_STYLES_STRING = `
     50% { transform: translate3d(0, -10px, 0); } 
   }
    
-  .animate-reveal, .animate-fade-in-up, .animate-slide-in-right {
-    animation-fill-mode: forwards;
-  }
-
-  .animate-reveal { animation: reveal 0.6s cubic-bezier(0.19, 1, 0.22, 1) forwards; }
-  .animate-reveal-bottom { animation: reveal-bottom 0.6s cubic-bezier(0.19, 1, 0.22, 1) forwards; }
-  .animate-slide-in-right { animation: slide-in-right 1s cubic-bezier(0.19, 1, 0.22, 1) forwards; }
+  /* Animations avec fill-mode: both pour garantir l'état initial/final correct */
+  .animate-reveal { animation: reveal 0.6s cubic-bezier(0.19, 1, 0.22, 1) both; }
+  .animate-reveal-bottom { animation: reveal-bottom 0.6s cubic-bezier(0.19, 1, 0.22, 1) both; }
+  .animate-slide-in-right { animation: slide-in-right 1s cubic-bezier(0.19, 1, 0.22, 1) both; }
   .animate-stress { animation: stress 0.3s infinite ease-in-out; }
   .animate-shake { animation: shake 0.5s cubic-bezier(.36,.07,.19,.97) both; }
   .animate-float-out { animation: float-out 0.8s ease-out forwards; }
   .animate-spin-slow { animation: spin 8s linear infinite; }
-  .animate-fade-in-up { animation: fade-in-up 0.8s cubic-bezier(0.2, 0.8, 0.2, 1) forwards; opacity: 0; }
+  .animate-fade-in-up { animation: fade-in-up 0.8s cubic-bezier(0.2, 0.8, 0.2, 1) both; }
   .animate-lumos-text { animation: lumos-text 1.5s cubic-bezier(0.2, 0.8, 0.2, 1) forwards; }
   .animate-shimmer-fast { animation: shimmer-fast 1.5s infinite; }
   .animate-scroll-normal { animation: scroll-normal 20s linear infinite; }
   .animate-wave { animation: wave 2s infinite; }
   .animate-quick-pop { animation: quick-pop 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards; }
-    
+  .animate-bounce-in { animation: bounce-in 0.8s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards; }
+  
   .will-change-pos { will-change: transform; }
-    
+
   @media (min-width: 768px) {
     .animate-float { animation: float 6s ease-in-out infinite; }
   }
     
   @media (prefers-reduced-motion: reduce) {
-    .animate-spin-slow, .animate-float, .animate-pulse, .animate-bounce, .animate-wave, .animate-shimmer-fast, .animate-scroll-normal, .animate-stress, .animate-shake {
+    .animate-spin-slow, .animate-float, .animate-pulse, .animate-bounce, .animate-wave, .animate-shimmer-fast, .animate-scroll-normal, .animate-stress, .animate-shake, .animate-reveal, .animate-fade-in-up {
       animation: none !important;
       transition: none !important;
       transform: none !important;
+      opacity: 1 !important; /* Force visible si animations off */
     }
   }
 
@@ -135,24 +133,17 @@ const GLOBAL_STYLES_STRING = `
   @keyframes fade-in-up { from { opacity: 0; transform: translate3d(0, 30px, 0); } to { opacity: 1; transform: translate3d(0, 0, 0); } }
   @keyframes lumos-text { 0% { opacity: 0; letter-spacing: 1em; filter: blur(10px); } 100% { opacity: 1; letter-spacing: 0; filter: blur(0); } }
   @keyframes shimmer-fast { from { transform: translate3d(-100%, 0, 0); } to { transform: translate3d(100%, 0, 0); } }
-  @keyframes scroll-normal { from { transform: translate3d(0, 0, 0); } to { transform: translate3d(-33.33%, 0, 0); } }
+  @keyframes scroll-normal { from { transform: translate3d(0, 0, 0); } to { transform: translate3d(-50%, 0, 0); } }
   @keyframes wave { 0% { transform: rotate(0deg); } 10% { transform: rotate(14deg); } 20% { transform: rotate(-8deg); } 30% { transform: rotate(14deg); } 40% { transform: rotate(-4deg); } 50% { transform: rotate(10deg); } 60% { transform: rotate(0deg); } 100% { transform: rotate(0deg); } }
   @keyframes quick-pop { from { opacity: 0; transform: scale(0.95); } to { opacity: 1; transform: scale(1); } }
-  @keyframes confetti-fall { 0% { background-position: 0 0; } 100% { background-position: 100px 1000px; } }
   @keyframes bounce-in { 0% { transform: scale(0); opacity: 0; } 60% { transform: scale(1.2); opacity: 1; } 100% { transform: scale(1); } }
-  .animate-confetti-fall { animation: confetti-fall 10s linear infinite; }
-  .animate-bounce-in { animation: bounce-in 0.8s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards; }
 
   .digital-grid { background-image: linear-gradient(rgba(220, 38, 38, 0.03) 1px, transparent 1px), linear-gradient(90deg, rgba(220, 38, 38, 0.03) 1px, transparent 1px); background-size: 50px 50px; }
-  .shadow-glow-red { box-shadow: 0 0 50px rgba(220, 38, 38, 0.4); }
-  .shadow-glow-emerald { box-shadow: 0 0 40px rgba(16, 185, 129, 0.4); }
-  .shadow-glow-white { box-shadow: 0 0 40px rgba(255, 255, 255, 0.6); }
-  .shadow-glow-yellow { box-shadow: 0 0 40px rgba(234, 179, 8, 0.4); }
-  .shadow-glow-purple { box-shadow: 0 0 40px rgba(168, 85, 247, 0.4); }
-    
-  .custom-scrollbar::-webkit-scrollbar { width: 5px; }
-  .custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 10px; }
-  .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #dc2626; }
+  .shadow-glow-red { box-shadow: 0 0 30px rgba(220, 38, 38, 0.3); }
+  .shadow-glow-emerald { box-shadow: 0 0 25px rgba(16, 185, 129, 0.3); }
+  .shadow-glow-white { box-shadow: 0 0 25px rgba(255, 255, 255, 0.4); }
+  .shadow-glow-yellow { box-shadow: 0 0 25px rgba(234, 179, 8, 0.3); }
+  .shadow-glow-purple { box-shadow: 0 0 25px rgba(168, 85, 247, 0.3); }
     
   .delay-100 { animation-delay: 100ms; }
   .delay-200 { animation-delay: 200ms; }
@@ -160,7 +151,7 @@ const GLOBAL_STYLES_STRING = `
   .animation-delay-2000 { animation-delay: 2s; }
 `;
 
-// Hook pour injecter les styles une seule fois sans React render
+// Hook pour injecter les styles
 const useGlobalStyles = () => {
   useLayoutEffect(() => {
     const style = document.createElement('style');
@@ -235,7 +226,6 @@ const formatScore = (num) => {
 };
 
 // --- TRADUCTIONS & DONNÉES ---
-
 const TEXTS = {
   fr: {
     nav: { expertise: "Expertise", bio: "Bio", lab: "Growth Lab", collab: "Collaborer" },
@@ -440,11 +430,112 @@ const Toast = memo(({ message, onClose }) => {
     );
 });
 
+// --- (3) OPTIMIZED VICTORY CELEBRATION (CANVAS) ---
 const VictoryCelebration = memo(() => {
+    const canvasRef = useRef(null);
+
+    useEffect(() => {
+        const canvas = canvasRef.current;
+        if (!canvas) return;
+
+        // Respect prefers-reduced-motion
+        const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+        if (prefersReducedMotion) return;
+
+        const ctx = canvas.getContext('2d', { alpha: true });
+        let animationFrameId;
+        let particles = [];
+        const particleCount = 50; // Limité pour la perf
+
+        const resize = () => {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+        };
+        resize();
+        window.addEventListener('resize', resize);
+
+        // Init particles
+        const colors = ['#fbbf24', '#ef4444', '#ffffff'];
+        for (let i = 0; i < particleCount; i++) {
+            particles.push({
+                x: Math.random() * canvas.width,
+                y: Math.random() * canvas.height - canvas.height,
+                vx: (Math.random() - 0.5) * 2,
+                vy: Math.random() * 3 + 2,
+                size: Math.random() * 4 + 2,
+                color: colors[Math.floor(Math.random() * colors.length)],
+                wobble: Math.random() * Math.PI * 2
+            });
+        }
+
+        const render = () => {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            particles.forEach(p => {
+                p.y += p.vy;
+                p.x += Math.sin(p.wobble) * 1;
+                p.wobble += 0.05;
+
+                // Reset si en bas, mais arrêt progressif après 5s géré par parent si besoin
+                if (p.y > canvas.height) {
+                    p.y = -10;
+                    p.x = Math.random() * canvas.width;
+                }
+
+                ctx.fillStyle = p.color;
+                ctx.beginPath();
+                ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+                ctx.fill();
+            });
+
+            animationFrameId = requestAnimationFrame(render);
+        };
+
+        // Limiter le framerate à ~30fps pour économiser le GPU
+        let lastTime = 0;
+        const fpsInterval = 1000 / 30;
+        
+        const loop = (timestamp) => {
+            animationFrameId = requestAnimationFrame(loop);
+            const elapsed = timestamp - lastTime;
+            if (elapsed > fpsInterval) {
+                lastTime = timestamp - (elapsed % fpsInterval);
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                particles.forEach(p => {
+                    p.y += p.vy;
+                    p.x += Math.sin(p.wobble) * 1;
+                    p.wobble += 0.05;
+                    if (p.y > canvas.height) {
+                        p.y = -10;
+                        p.x = Math.random() * canvas.width;
+                    }
+                    ctx.fillStyle = p.color;
+                    ctx.beginPath();
+                    ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+                    ctx.fill();
+                });
+            }
+        };
+
+        loop(0);
+
+        // Arrêt automatique après 6 secondes
+        const timeout = setTimeout(() => {
+            cancelAnimationFrame(animationFrameId);
+            if(canvas) ctx.clearRect(0, 0, canvas.width, canvas.height);
+        }, 6000);
+
+        return () => {
+            window.removeEventListener('resize', resize);
+            cancelAnimationFrame(animationFrameId);
+            clearTimeout(timeout);
+        };
+    }, []);
+
     return (
         <div className="fixed inset-0 z-[9999] pointer-events-none flex items-center justify-center overflow-hidden">
-             <div className="absolute inset-0 bg-black/40 backdrop-blur-[2px] animate-fade-in-up" />
-             <div className="absolute inset-0 animate-confetti-fall will-change-transform" style={{backgroundImage: 'radial-gradient(circle, #fbbf24 4px, transparent 4px)', backgroundSize: '60px 60px', opacity: 0.5}}></div>
+             <div className="absolute inset-0 bg-black/80 animate-fade-in-up" />
+             <canvas ref={canvasRef} className="absolute inset-0" />
              <div className="relative z-10 flex flex-col items-center animate-bounce-in will-change-transform">
                  <Trophy size={100} className="text-yellow-400 drop-shadow-[0_0_30px_rgba(251,191,36,0.6)]" />
                  <h2 className="text-6xl font-black text-white uppercase italic tracking-tighter mt-6 drop-shadow-2xl">Expert <span className="text-yellow-400">Unlock</span></h2>
@@ -495,7 +586,7 @@ const QuestTracker = memo(({ found, t }) => {
         )}
 
         <div 
-            className={`group flex flex-col bg-[#0a0a0a]/95 backdrop-blur-md border ${isComplete ? 'border-yellow-500/50 shadow-glow-yellow' : 'border-white/10 shadow-2xl'} rounded-2xl transition-all duration-300 cursor-pointer overflow-hidden relative w-auto min-w-[300px] will-change-transform`}
+            className={`group flex flex-col bg-[#0a0a0a] shadow-2xl border ${isComplete ? 'border-yellow-500/50 shadow-glow-yellow' : 'border-white/10'} rounded-2xl transition-all duration-300 cursor-pointer overflow-hidden relative w-auto min-w-[300px] will-change-transform`}
             onClick={() => !isComplete && setIsOpen(!isOpen)}
         >
             <div className="p-4 flex items-center justify-between">
@@ -575,11 +666,11 @@ const Navbar = memo(({ view, navigateTo, openChat, lang, setLang, t, isMuted, to
   }, [navigateTo]);
 
   return (
-    <nav className={`fixed top-0 w-full z-[100] transition-all duration-700 font-black will-change-transform ${(scrolled || view === 'play') ? 'bg-black/95 backdrop-blur-md border-b border-white/10 py-4 shadow-2xl' : 'bg-transparent py-6 md:py-10'}`}>
+    <nav className={`fixed top-0 w-full z-[100] transition-all duration-700 font-black will-change-transform ${(scrolled || view === 'play') ? 'bg-[#050505] border-b border-white/10 py-4 shadow-2xl' : 'bg-transparent py-6 md:py-10'}`}>
       <div className="max-w-7xl mx-auto px-6 md:px-10 flex justify-between items-center relative">
         <div onClick={() => { navigateTo('home'); }} className="group cursor-pointer flex items-center gap-4 md:gap-6 active:scale-90 transition-all duration-500 z-50">
           <div className="relative">
-            <div className="absolute inset-0 bg-red-600 blur-xl opacity-0 group-hover:opacity-40 transition-opacity" />
+            <div className="absolute inset-0 bg-red-600 opacity-0 group-hover:opacity-40 rounded-full shadow-[0_0_30px_rgba(220,38,38,0.8)] transition-opacity" />
             <div className="w-12 h-12 md:w-16 md:h-16 bg-gradient-to-tr from-red-600 via-red-500 to-orange-500 rounded-2xl md:rounded-3xl flex items-center justify-center text-white shadow-xl group-hover:rotate-12 transition-transform duration-500 text-xl md:text-2xl font-black relative z-10 will-change-transform">LL</div>
             <div className="absolute -top-1 -right-1 w-4 h-4 md:w-5 md:h-5 bg-emerald-500 border-[3px] border-black rounded-full shadow-glow-emerald z-20"></div>
           </div>
@@ -654,7 +745,7 @@ const SkillRadar = memo(({t}) => {
                 <circle cx="35" cy="100" r="3" fill="#fff" />
             </svg>
             <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                <div className="bg-black/80 backdrop-blur px-3 py-1 rounded-full border border-white/10">
+                <div className="bg-black border border-white/10 rounded-full px-3 py-1">
                     <span className="text-[8px] font-black uppercase tracking-widest text-slate-300">{t.radar_title}</span>
                 </div>
             </div>
@@ -662,15 +753,46 @@ const SkillRadar = memo(({t}) => {
     )
 });
 
+// --- (1) OPTIMIZED TECH STACK TICKER ---
 const TechStackTicker = memo(({t}) => {
+    const containerRef = useRef(null);
+    const [isPaused, setPaused] = useState(false);
     const stack = useMemo(() => ["Meta Ads", "Google Ads", "GA4", "SEO Technical", "TikTok Ads", "HubSpot", "Zapier", "Copywriting", "Viral Loops", "Looker Studio", "Notion", "LinkedIn Growth"], []);
+    
+    useEffect(() => {
+        // Pauser l'animation si l'onglet n'est pas actif
+        const handleVisibilityChange = () => {
+            setPaused(document.hidden);
+        };
+        document.addEventListener("visibilitychange", handleVisibilityChange);
+
+        // Pauser l'animation si le composant n'est pas visible à l'écran
+        const observer = new IntersectionObserver(([entry]) => {
+            setPaused(!entry.isIntersecting);
+        }, { threshold: 0 });
+
+        if (containerRef.current) {
+            observer.observe(containerRef.current);
+        }
+
+        return () => {
+            document.removeEventListener("visibilitychange", handleVisibilityChange);
+            observer.disconnect();
+        };
+    }, []);
+
     return (
-        <div className="w-full overflow-hidden border-y border-white/5 bg-white/[0.02] py-4 relative">
-            <div className="absolute left-0 top-0 bottom-0 w-12 bg-gradient-to-r from-[#0a0a0a] to-transparent z-10" />
-            <div className="absolute right-0 top-0 bottom-0 w-12 bg-gradient-to-l from-[#0a0a0a] to-transparent z-10" />
-            <div className="flex whitespace-nowrap animate-scroll-normal will-change-transform">
-                {[...stack, ...stack, ...stack].map((item, i) => (
-                    <span key={i} className="mx-6 text-slate-500 font-black uppercase text-[10px] tracking-widest flex items-center gap-2">
+        <div ref={containerRef} className="w-full overflow-hidden border-y border-white/5 bg-[#020202] py-4 relative contain-content">
+            <div className="absolute left-0 top-0 bottom-0 w-12 bg-gradient-to-r from-[#0a0a0a] to-transparent z-10 pointer-events-none" />
+            <div className="absolute right-0 top-0 bottom-0 w-12 bg-gradient-to-l from-[#0a0a0a] to-transparent z-10 pointer-events-none" />
+            
+            {/* Duplication réduite : seulement 2 copies nécessaires pour une boucle fluide si transform -50% */}
+            <div 
+                className="flex whitespace-nowrap animate-scroll-normal will-change-transform" 
+                style={{ animationPlayState: isPaused ? 'paused' : 'running' }}
+            >
+                {[...stack, ...stack].map((item, i) => (
+                    <span key={i} className="mx-6 text-slate-500 font-black uppercase text-[10px] tracking-widest flex items-center gap-2 transform-gpu">
                         <div className="w-1 h-1 bg-red-600 rounded-full" /> {item}
                     </span>
                 ))}
@@ -681,7 +803,7 @@ const TechStackTicker = memo(({t}) => {
 
 const TrustStrip = memo(({ lang, t }) => (
   <>
-    <div className="py-6 md:py-10 border-y border-white/5 bg-white/[0.02] overflow-hidden backdrop-blur-sm relative z-30">
+    <div className="py-6 md:py-10 border-y border-white/5 bg-[#0a0a0a] overflow-hidden relative z-30">
         <div className="max-w-7xl mx-auto px-6 flex flex-wrap justify-center lg:justify-between gap-4 md:gap-8 items-center text-slate-500 font-bold uppercase text-[9px] md:text-[10px] tracking-[0.2em]">
         <div className="flex items-center gap-2 md:gap-3"><ShieldCheck size={16} className="text-emerald-500" /> {t.sat}</div>
         <div className="flex items-center gap-2 md:gap-3"><Activity size={16} className="text-red-500" /> {t.proj}</div>
@@ -700,7 +822,7 @@ const TestimonialsSection = memo(({ testimonials, t }) => {
   const isVisible = useInView(containerRef, { triggerOnce: true });
 
   return (
-    <section ref={containerRef} className={`py-16 md:py-40 px-6 relative font-black border-t border-white/5 ${isVisible ? 'opacity-100' : 'opacity-0'} transition-opacity duration-1000 cv-auto`}>
+    <section ref={containerRef} className={`py-16 md:py-40 px-6 relative font-black border-t border-white/5 ${isVisible ? 'opacity-100' : 'opacity-0'} transition-opacity duration-1000`}>
       <div className="max-w-7xl mx-auto space-y-12 md:space-y-24">
         <div className="text-center space-y-4">
           <p className="text-red-500 font-black uppercase text-[10px] md:text-[11px] tracking-[0.8em]">{t.sub}</p>
@@ -925,13 +1047,13 @@ const Modal = memo(({ isOpen, onClose, children }) => {
 const HeroSection = memo(({ openChat, playSound, profileImageUrl, t, handleDownload, triggerLongPress }) => {
     const pressTimer = useRef(null);
 
-    const handleMouseDown = () => {
+    const handlePointerDown = () => {
         pressTimer.current = setTimeout(() => {
             triggerLongPress();
         }, 2000);
     };
 
-    const handleMouseUp = () => {
+    const handlePointerUp = () => {
         if (pressTimer.current) clearTimeout(pressTimer.current);
     };
 
@@ -948,11 +1070,10 @@ const HeroSection = memo(({ openChat, playSound, profileImageUrl, t, handleDownl
             </div>
             <h1 
                 className="text-5xl sm:text-6xl md:text-7xl lg:text-8xl font-black text-white tracking-tighter leading-[0.9] lg:leading-[0.8] uppercase italic animate-fade-in-up delay-100 select-none cursor-pointer active:scale-[0.98] transition-transform w-full break-words whitespace-normal"
-                onMouseDown={handleMouseDown}
-                onMouseUp={handleMouseUp}
-                onTouchStart={handleMouseDown}
-                onTouchEnd={handleMouseUp}
-                onMouseLeave={handleMouseUp}
+                onPointerDown={handlePointerDown}
+                onPointerUp={handlePointerUp}
+                onPointerCancel={handlePointerUp}
+                onPointerLeave={handlePointerUp}
             >
               {t.title1} <br /> <span className="text-transparent bg-clip-text bg-gradient-to-r from-red-600 via-red-400 to-orange-500 drop-shadow-2xl inline-block pr-12 pb-4">{t.title2}</span>
             </h1>
@@ -982,7 +1103,7 @@ const HeroSection = memo(({ openChat, playSound, profileImageUrl, t, handleDownl
             </div>
             
             {/* BULLE EXPÉRIENCE */}
-            <div className="absolute -top-12 right-8 z-50 animate-float bg-black/80 backdrop-blur-md border border-white/5 p-3 pr-5 rounded-full flex items-center gap-3 shadow-xl will-change-transform">
+            <div className="absolute -top-12 right-8 z-50 animate-float bg-[#0a0a0a] border border-white/10 p-3 pr-5 rounded-full flex items-center gap-3 shadow-xl will-change-transform">
                   <div className="bg-red-600/20 p-2 rounded-full text-red-500"><Trophy size={16} /></div>
                   <div>
                       <p className="text-[9px] text-slate-400 font-bold uppercase tracking-wider">{t.exp}</p>
@@ -991,7 +1112,7 @@ const HeroSection = memo(({ openChat, playSound, profileImageUrl, t, handleDownl
             </div>
 
             {/* BULLE SUCCÈS */}
-            <div className="absolute -bottom-12 left-8 z-50 animate-float animation-delay-2000 bg-black/80 backdrop-blur-md border border-white/5 p-3 pr-5 rounded-full flex items-center gap-3 shadow-xl will-change-transform">
+            <div className="absolute -bottom-12 left-8 z-50 animate-float animation-delay-2000 bg-[#0a0a0a] border border-white/10 p-3 pr-5 rounded-full flex items-center gap-3 shadow-xl will-change-transform">
                   <div className="bg-emerald-500/20 p-2 rounded-full text-emerald-500"><CheckCircle size={16} /></div>
                   <div>
                       <p className="text-[9px] text-slate-400 font-bold uppercase tracking-wider">{t.proj}</p>
@@ -1078,7 +1199,7 @@ const Experiences = memo(({ experiences, onSpell, t }) => {
   }, []);
 
   return (
-    <section id="missions" ref={containerRef} className={`py-16 md:py-32 px-6 relative font-black ${isVisible ? 'opacity-100' : 'opacity-0'} transition-opacity duration-1000 cv-auto`}>
+    <section id="missions" ref={containerRef} className={`py-16 md:py-32 px-6 relative font-black ${isVisible ? 'opacity-100' : 'opacity-0'} transition-opacity duration-1000`}>
       <div className="absolute top-0 left-0 w-full h-full bg-gradient-to-b from-transparent via-red-600/5 to-transparent -z-10" />
       <div className="max-w-6xl mx-auto space-y-12 md:space-y-32">
         <div className="text-center space-y-6">
@@ -1093,7 +1214,7 @@ const Experiences = memo(({ experiences, onSpell, t }) => {
           {experiences.map((exp, i) => (
             <div key={i} className={`relative flex flex-col md:flex-row items-center gap-8 md:gap-20 group ${i % 2 === 0 ? 'md:flex-row' : 'md:flex-row-reverse'} animate-reveal font-black`}>
               <div className="absolute left-[20px] md:left-1/2 md:-translate-x-1/2 w-10 h-10 rounded-full bg-black border-4 border-red-600 z-20 group-hover:scale-150 transition-all duration-500 hidden md:block shadow-glow-red font-black" />
-              <div className={`w-full md:w-[45%] p-6 md:p-16 rounded-[2rem] md:rounded-[5rem] transition-all duration-1000 relative overflow-hidden font-black ${exp.isPoudlard ? 'bg-[#0a0a0a] border-amber-500/40 shadow-2xl ring-1 ring-amber-500/20' : 'bg-slate-900/60 border-white/5 backdrop-blur-md hover:bg-slate-900 group-hover:border-red-500/40 shadow-3xl'}`}>
+              <div className={`w-full md:w-[45%] p-6 md:p-16 rounded-[2rem] md:rounded-[5rem] transition-all duration-1000 relative overflow-hidden font-black ${exp.isPoudlard ? 'bg-[#0a0a0a] border-amber-500/40 shadow-2xl ring-1 ring-amber-500/20' : 'bg-slate-900 border-white/10 hover:bg-slate-900 group-hover:border-red-500/40 shadow-3xl'}`}>
                 {exp.isPoudlard && <div className="absolute top-0 right-0 bg-amber-500 px-6 py-3 md:px-10 md:py-4 rounded-bl-[2rem] md:rounded-bl-[2.5rem] font-black text-[9px] md:text-[11px] text-black tracking-widest uppercase flex items-center gap-2 md:gap-3 shadow-2xl font-black"><span className="animate-spin-slow"><Sparkles size={14} fill="black" /></span> Projet Pilier</div>}
                 <div className="space-y-6 md:space-y-12 font-black">
                   <div className="space-y-4 font-black">
@@ -1140,7 +1261,7 @@ const Experiences = memo(({ experiences, onSpell, t }) => {
 });
 
 const CursusSectionComp = memo(({ t }) => (
-  <div className="grid grid-cols-1 md:grid-cols-2 gap-8 md:gap-12 text-left font-black cv-auto">
+  <div className="grid grid-cols-1 md:grid-cols-2 gap-8 md:gap-12 text-left font-black">
     <div className="group relative p-8 md:p-12 bg-slate-900/40 border border-emerald-500/20 rounded-[3rem] md:rounded-[4rem] transition-all hover:bg-slate-900 shadow-2xl overflow-hidden font-black">
       <GraduationCap size={40} className="text-emerald-500 mb-6 md:mb-8 relative z-10" />
       <h4 className="text-white font-black text-2xl md:text-3xl uppercase tracking-tighter leading-none relative z-10">{t.dc.title}</h4>
@@ -1166,10 +1287,11 @@ const CursusSectionComp = memo(({ t }) => (
 
 const SectionBio = memo(({ profileImageUrl, navigateTo, copyDiscord, copyFeedback, playSound, onSpell, t, handleDownload, sayHello }) => {
   const containerRef = useRef(null);
+  // Visibilité simple sans condition opacity-0 pour éviter le FOUC/disparition
   const isVisible = useInView(containerRef, { triggerOnce: true });
 
   return (
-  <div ref={containerRef} className={`pt-24 md:pt-40 pb-16 md:pb-24 px-6 ${isVisible ? 'animate-reveal' : 'opacity-0'} font-black cv-auto`}>
+  <div ref={containerRef} className={`pt-24 md:pt-40 pb-16 md:pb-24 px-6 animate-reveal font-black`}>
     <div className="max-w-7xl mx-auto">
       <div className="mb-12 md:mb-20 space-y-6">
         <p className="text-red-500 font-black uppercase text-[11px] tracking-[1em] animate-fade-in-up">{t.sub}</p>
@@ -1221,7 +1343,7 @@ const SectionBio = memo(({ profileImageUrl, navigateTo, copyDiscord, copyFeedbac
 
         <div className="lg:col-span-8 space-y-8">
           <div className="bg-[#0a0a0a] border border-white/10 rounded-[2.5rem] md:rounded-[3rem] p-8 md:p-14 space-y-8 md:space-y-12 relative overflow-hidden shadow-3xl">
-            <div className="absolute top-0 right-0 w-64 h-64 bg-red-600/5 blur-[80px] rounded-full pointer-events-none"></div>
+            <div className="absolute top-0 right-0 w-96 h-96 bg-[radial-gradient(closest-side,rgba(220,38,38,0.1),transparent)] pointer-events-none"></div>
             
             <div className="relative z-10">
               <h3 className="text-3xl md:text-6xl font-black text-white uppercase tracking-tighter leading-[0.9] italic mb-4 flex items-center gap-3 md:gap-4 flex-wrap">
@@ -1342,7 +1464,7 @@ const gameReducer = (state, action) => {
     
     // --- ATOMIC SCORE LOGIC ---
     case 'TARGET_HIT': {
-        const { targetType, id, x, y } = action.payload;
+        const { targetType, id, x, y, feedbackId } = action.payload;
         let newScore = state.score;
         let newTime = state.timeLeft;
         let newCombo = state.combo;
@@ -1386,8 +1508,6 @@ const gameReducer = (state, action) => {
                 color = "text-blue-400";
                 break;
         }
-
-        const feedbackId = Math.random();
         
         return {
             ...state,
@@ -1403,9 +1523,6 @@ const gameReducer = (state, action) => {
     case 'RESET_MULTIPLIER':
         return { ...state, multiplier: Math.max(1, state.multiplier - 1) };
 
-    case 'REMOVE_FEEDBACK_BY_ID':
-        return { ...state, clickFeedbacks: state.clickFeedbacks.filter(f => f.id !== action.payload) };
-
     default:
       return state;
   }
@@ -1418,50 +1535,77 @@ const GrowthLabGameComp = memo(({ navigateTo, playSound, profileImageUrl, openCh
   const lastFrameTime = useRef(0);
   const gameAreaRef = useRef(null);
   const visualUpdateRef = useRef(null);
+  const isVisibleRef = useRef(false);
 
   const targetsPhysics = useRef([]);
   const targetElementsRef = useRef({});
+
+  // Observation de visibilité pour mettre en pause la loop physique
+  useEffect(() => {
+      const observer = new IntersectionObserver(([entry]) => {
+          isVisibleRef.current = entry.isIntersecting;
+      }, { threshold: 0.1 });
+      
+      if (gameAreaRef.current) {
+          observer.observe(gameAreaRef.current);
+      }
+      return () => observer.disconnect();
+  }, []);
 
   // Memoize score scaling style
   const scoreStyle = useMemo(() => ({
     transform: `scale(${1 + Math.min(combo * 0.1, 0.5)})`
   }), [combo]);
 
-  // Remove feedbacks automatically
-  useEffect(() => {
-      if (clickFeedbacks.length > 0) {
-          const timer = setTimeout(() => {
-              dispatch({ type: 'REMOVE_FEEDBACK_BY_ID', payload: clickFeedbacks[0].id });
-          }, 800);
-          return () => clearTimeout(timer);
-      }
-  }, [clickFeedbacks]);
-
+  // GAME LOOP OPTIMISÉE (Adaptive FPS)
   useEffect(() => {
     let animationFrame;
     let frameCount = 0;
 
     if (gameActive) {
       lastFrameTime.current = performance.now();
+      
       const updatePhysics = (time) => {
-        frameCount++;
-        const shouldUpdateVisual = frameCount % 2 === 0; // Throttle visual updates
+        // Pause si non visible ou onglet inactif
+        if (!isVisibleRef.current || document.hidden) {
+            animationFrame = requestAnimationFrame(updatePhysics);
+            lastFrameTime.current = time;
+            return;
+        }
 
-        let dt = (time - lastFrameTime.current) / 16.66;
-        if (dt > 4) dt = 1;
-        lastFrameTime.current = time;
-
-        const container = gameAreaRef.current;
-        if (!container) return;
+        const delta = time - lastFrameTime.current;
         
-        if (!visualUpdateRef.current) {
+        // Limite à ~30 FPS si la charge est trop forte (>33ms par frame)
+        // Sinon cible 60 FPS (~16ms)
+        const targetInterval = delta > 33 ? 33 : 16;
+
+        if (delta < targetInterval) {
+            animationFrame = requestAnimationFrame(updatePhysics);
+            return;
+        }
+
+        lastFrameTime.current = time - (delta % targetInterval);
+        frameCount++;
+
+        // Mise à jour layout une seule fois au début ou resize (géré par resize listener)
+        if (!visualUpdateRef.current && gameAreaRef.current) {
             visualUpdateRef.current = {
-                width: container.offsetWidth,
-                height: container.offsetHeight
+                width: gameAreaRef.current.offsetWidth,
+                height: gameAreaRef.current.offsetHeight
             };
         }
-        const { width, height } = visualUpdateRef.current;
+        
+        // Sécurité si ref pas prête
+        if (!visualUpdateRef.current) {
+             animationFrame = requestAnimationFrame(updatePhysics);
+             return;
+        }
 
+        const { width, height } = visualUpdateRef.current;
+        let dt = delta / 16.66;
+        if (dt > 4) dt = 1; // Cap dt pour éviter les sauts
+
+        // Update physique
         targetsPhysics.current.forEach(t => {
           t.x += t.vx * dt;
           t.y += t.vy * dt;
@@ -1472,25 +1616,27 @@ const GrowthLabGameComp = memo(({ navigateTo, playSound, profileImageUrl, openCh
           if (t.y <= 0) { t.y = 0; t.vy = Math.abs(t.vy); }
           else if (t.y >= 100) { t.y = 100; t.vy = -Math.abs(t.vy); }
 
-          if (shouldUpdateVisual) {
-              const el = targetElementsRef.current[t.id];
-              if (el) {
-                const deltaX = (t.x - t.initialX) / 100 * width;
-                const deltaY = (t.y - t.initialY) / 100 * height;
-                el.style.transform = `translate3d(${deltaX}px, ${deltaY}px, 0)`;
-              }
+          // Mise à jour DOM directe (évite React render)
+          const el = targetElementsRef.current[t.id];
+          if (el) {
+            const deltaX = (t.x - t.initialX) / 100 * width;
+            const deltaY = (t.y - t.initialY) / 100 * height;
+            el.style.transform = `translate3d(${deltaX}px, ${deltaY}px, 0)`;
           }
         });
+        
         animationFrame = requestAnimationFrame(updatePhysics);
       };
       animationFrame = requestAnimationFrame(updatePhysics);
     }
     return () => {
         cancelAnimationFrame(animationFrame);
+        // Reset layout cache on stop
         visualUpdateRef.current = null;
     };
   }, [gameActive]);
 
+  // Resize handler optimisé (debounce strict)
   useEffect(() => {
     let resizeTimeout;
     const handleResize = () => {
@@ -1500,20 +1646,19 @@ const GrowthLabGameComp = memo(({ navigateTo, playSound, profileImageUrl, openCh
                 visualUpdateRef.current.width = gameAreaRef.current.offsetWidth;
                 visualUpdateRef.current.height = gameAreaRef.current.offsetHeight;
             }
-        }, 150);
+        }, 200);
     };
     window.addEventListener('resize', handleResize, { passive: true });
-    return () => {
-        window.removeEventListener('resize', handleResize);
-        clearTimeout(resizeTimeout);
-    };
+    return () => window.removeEventListener('resize', handleResize);
   }, []);
 
+  // Spawn logic
   useEffect(() => {
     let spawnInterval;
     if (gameActive) {
       spawnInterval = setInterval(() => {
         if (targetsPhysics.current.length >= 8) return;
+        if (!isVisibleRef.current || document.hidden) return; // Pas de spawn si caché
 
         const id = Math.random();
         const rand = Math.random();
@@ -1537,14 +1682,8 @@ const GrowthLabGameComp = memo(({ navigateTo, playSound, profileImageUrl, openCh
         if (Math.abs(vy) < 0.2) vy = 0.5;
 
         const newTarget = { 
-            id, 
-            x: startX, 
-            y: startY, 
-            initialX: startX,
-            initialY: startY,
-            type, 
-            vx: vx * speedFactor, 
-            vy: vy * speedFactor 
+            id, x: startX, y: startY, initialX: startX, initialY: startY,
+            type, vx: vx * speedFactor, vy: vy * speedFactor 
         };
 
         targetsPhysics.current.push(newTarget);
@@ -1561,10 +1700,39 @@ const GrowthLabGameComp = memo(({ navigateTo, playSound, profileImageUrl, openCh
     return () => clearInterval(spawnInterval);
   }, [gameActive, panicMode]);
 
+  // Timer logic
+  useEffect(() => {
+    let timer;
+    if (gameActive) {
+      timer = setInterval(() => {
+        if (isVisibleRef.current && !document.hidden) {
+            dispatch({ type: 'UPDATE_TIME', payload: prev => prev <= 0 ? 0 : prev - 1 });
+        }
+      }, 1000);
+    }
+    return () => clearInterval(timer);
+  }, [gameActive]);
+
+  // End Game & Panic logic
+  useEffect(() => {
+      if (gameActive && timeLeft <= 6 && timeLeft > 0 && !panicMode) {
+          dispatch({ type: 'SET_PANIC', payload: true });
+          playSound(200, 'square', 0.1);
+      }
+      if (timeLeft === 0 && gameActive) {
+          dispatch({ type: 'END_GAME' });
+          playSound(60, 'sawtooth', 0.8);
+          targetsPhysics.current = [];
+          if (score > 150000) onSpell('highscore');
+      }
+  }, [timeLeft, gameActive, panicMode, playSound, score, onSpell]);
+
+  // Events logic
   useEffect(() => {
     let eventInterval;
     if (gameActive) {
         eventInterval = setInterval(() => {
+            if (!isVisibleRef.current) return;
             const rand = Math.random();
             if (rand < 0.15) {
                 dispatch({ type: 'SET_VISUAL_EVENT', payload: 'crash' });
@@ -1580,32 +1748,6 @@ const GrowthLabGameComp = memo(({ navigateTo, playSound, profileImageUrl, openCh
     return () => clearInterval(eventInterval);
   }, [gameActive, playSound]);
 
-  useEffect(() => {
-    let timer;
-    if (gameActive) {
-      timer = setInterval(() => {
-        dispatch({ type: 'UPDATE_TIME', payload: prev => prev <= 0 ? 0 : prev - 1 });
-      }, 1000);
-    }
-    return () => clearInterval(timer);
-  }, [gameActive]);
-
-  useEffect(() => {
-      if (gameActive && timeLeft <= 6 && timeLeft > 0 && !panicMode) {
-          dispatch({ type: 'SET_PANIC', payload: true });
-          playSound(200, 'square', 0.1);
-      }
-  }, [timeLeft, gameActive, panicMode, playSound]);
-
-  useEffect(() => {
-      if (timeLeft === 0 && gameActive) {
-          dispatch({ type: 'END_GAME' });
-          playSound(60, 'sawtooth', 0.8);
-          targetsPhysics.current = [];
-          if (score > 150000) onSpell('highscore');
-      }
-  }, [timeLeft, gameActive, score, onSpell, playSound]);
-
   const startGame = useCallback(() => {
     dispatch({ type: 'START_GAME' });
     targetsPhysics.current = [];
@@ -1616,11 +1758,15 @@ const GrowthLabGameComp = memo(({ navigateTo, playSound, profileImageUrl, openCh
     const targetPhys = targetsPhysics.current.find(t => t.id === id);
     const currentX = targetPhys ? targetPhys.x : 50;
     const currentY = targetPhys ? targetPhys.y : 50;
+    const feedbackId = Math.random();
 
-    // Trigger atomic update inside reducer
-    dispatch({ type: 'TARGET_HIT', payload: { targetType: type, id, x: currentX, y: currentY } });
+    dispatch({ type: 'TARGET_HIT', payload: { targetType: type, id, x: currentX, y: currentY, feedbackId } });
+    
+    // Auto-remove feedback after 800ms
+    setTimeout(() => {
+        dispatch({ type: 'REMOVE_FEEDBACK', payload: feedbackId }); 
+    }, 800);
 
-    // Side effects (sound) still here
     switch(type) {
       case 'lead': playSound(880 + (combo * 20)); break;
       case 'golden_rocket': 
@@ -1633,29 +1779,33 @@ const GrowthLabGameComp = memo(({ navigateTo, playSound, profileImageUrl, openCh
       case 'clock': playSound(1200); break;
     }
 
-    // Physics cleanup
     targetsPhysics.current = targetsPhysics.current.filter(t => t.id !== id);
     delete targetElementsRef.current[id];
-
   }, [combo, playSound]);
 
   return (
     <div className="pt-24 md:pt-40 pb-24 md:pb-40 px-6 font-black animate-reveal min-h-screen relative flex flex-col items-center justify-start overflow-hidden cv-auto">
+        {/* Background static léger */}
+        <div className="absolute inset-0 bg-[#020202] -z-10" />
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,rgba(220,38,38,0.05)_0%,transparent_100%)] -z-10" />
+        
         <div className="max-w-6xl w-full space-y-8 md:space-y-12 relative z-10 py-6 md:py-10 font-black">
+            {/* Header Jeu */}
             <div className="text-center space-y-4 md:space-y-6 mb-8 md:mb-12">
                 <h2 className="text-4xl md:text-6xl lg:text-[100px] font-black text-white tracking-tighter uppercase italic leading-[0.9] md:leading-[0.8] animate-float leading-none">{t.title} <br/><span className="text-red-600 cursor-pointer hover:text-white transition-colors" onClick={() => onSpell('wingardium')}>{t.title_sub}</span></h2>
             </div>
 
+            {/* Zone de Jeu */}
             <div className={`relative bg-[#050505] border-2 rounded-[3rem] md:rounded-[4rem] p-6 md:p-16 shadow-3xl transition-all duration-1000 border-white/10 w-full mx-auto ${gameActive ? 'border-red-600/40' : ''} ${panicMode ? 'animate-stress' : ''} ${visualEvent === 'crash' ? 'animate-shake' : ''}`}>
                 <div className="relative z-10 flex flex-col lg:flex-row justify-between items-center mb-8 md:mb-12 gap-6 md:gap-8">
+                    {/* Scoreboard haut */}
                     <div className="text-center lg:text-left space-y-4">
-                    <div className="flex gap-3 justify-center lg:justify-start items-center">
-                        <div className="bg-white/[0.03] border border-white/10 px-4 md:px-5 py-2 md:py-3 rounded-2xl inline-block backdrop-blur-md">
-                            <p className="text-[9px] md:text-[10px] font-black uppercase tracking-[0.4em] text-slate-400 flex items-center gap-3"><Star size={14} className="text-yellow-500" /> Combo: <span className="text-white">x{combo}</span></p>
+                        <div className="flex gap-3 justify-center lg:justify-start items-center">
+                            <div className="bg-white/[0.03] border border-white/10 px-4 md:px-5 py-2 md:py-3 rounded-2xl inline-block backdrop-blur-md">
+                                <p className="text-[9px] md:text-[10px] font-black uppercase tracking-[0.4em] text-slate-400 flex items-center gap-3"><Star size={14} className="text-yellow-500" /> Combo: <span className="text-white">x{combo}</span></p>
+                            </div>
+                            {multiplier > 1 && <div className="bg-yellow-500 text-black px-4 md:px-5 py-2 md:py-3 rounded-2xl animate-bounce shadow-glow-yellow font-black uppercase text-[9px] md:text-[10px] tracking-widest italic leading-none">HYPE x{multiplier}</div>}
                         </div>
-                        {multiplier > 1 && <div className="bg-yellow-500 text-black px-4 md:px-5 py-2 md:py-3 rounded-2xl animate-bounce shadow-glow-yellow font-black uppercase text-[9px] md:text-[10px] tracking-widest italic leading-none">HYPE x{multiplier}</div>}
-                    </div>
                     </div>
                     {gameActive && (
                     <div className="flex gap-4 md:gap-6 animate-slide-in-right">
@@ -1670,12 +1820,14 @@ const GrowthLabGameComp = memo(({ navigateTo, playSound, profileImageUrl, openCh
                     </div>
                     )}
                 </div>
+                
+                {/* Game Area Container */}
                 <div ref={gameAreaRef} className={`relative w-full max-w-5xl mx-auto aspect-none md:aspect-[16/8] h-[60vh] md:h-auto bg-[#020202] rounded-[2rem] md:rounded-[3rem] border border-white/10 overflow-hidden group cursor-crosshair transition-all duration-1000 ${gameActive ? 'ring-4 md:ring-8 ring-red-600/5' : ''}`}>
                     {visualEvent === 'crash' && <div className="absolute inset-0 bg-red-600/20 z-0 animate-pulse pointer-events-none" />}
                     {visualEvent === 'hype' && <div className="absolute inset-0 bg-yellow-500/20 z-0 animate-pulse pointer-events-none" />}
                     
                     {!gameActive ? (
-                    <div className="absolute inset-0 z-[100] flex items-center justify-center bg-black/95 backdrop-blur-[40px] p-6 text-center">
+                    <div className="absolute inset-0 z-[100] flex items-center justify-center bg-[#050505] p-6 text-center">
                         {showBriefing ? (
                             <div className="animate-reveal space-y-6 md:space-y-8 w-full max-w-3xl mx-auto flex flex-col items-center p-6 md:p-8 bg-[#0a0a0a] border border-white/10 rounded-[2rem] md:rounded-[3rem] shadow-2xl">
                                 <h3 className="text-white font-black text-2xl md:text-4xl uppercase italic tracking-tighter">{t.brief}</h3>
@@ -1727,7 +1879,7 @@ const GrowthLabGameComp = memo(({ navigateTo, playSound, profileImageUrl, openCh
                                 <p className="text-white text-3xl md:text-5xl font-black tracking-tighter leading-none">20.5M</p>
                                 </div>
                             </div>
-                            <div className="flex flex-col p-6 bg-white/[0.03] border border-white/10 rounded-[2rem] md:rounded-[2.5rem] shadow-3xl backdrop-blur-3xl text-left">
+                            <div className="flex flex-col p-6 bg-white/[0.03] border border-white/10 rounded-[2rem] md:rounded-[2.5rem] shadow-3xl text-left">
                                 <div className="flex items-center gap-4 mb-4"><div className="w-10 h-10 rounded-xl bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center text-emerald-500"><User size={20} /></div><p className="text-white text-base font-black uppercase tracking-tighter italic leading-none">{t.you}</p></div>
                                 <div className="mt-auto"><p className="text-slate-600 text-[8px] font-black uppercase tracking-[0.4em]">{t.score}</p><p className="text-red-500 text-3xl md:text-5xl font-black tracking-tighter leading-none">{formatScore(score)}</p></div>
                             </div>
@@ -1755,11 +1907,7 @@ const GrowthLabGameComp = memo(({ navigateTo, playSound, profileImageUrl, openCh
                             return (
                             <div 
                                 key={t.id} 
-                                ref={el => { 
-                                    if(el) {
-                                        targetElementsRef.current[t.id] = el;
-                                    } 
-                                }}
+                                ref={el => { if(el) targetElementsRef.current[t.id] = el; }}
                                 onClick={(e) => { e.stopPropagation(); handleTargetClick(t.type, t.id); }} 
                                 className={`absolute transform -translate-x-1/2 -translate-y-1/2 p-4 md:p-6 rounded-full cursor-pointer z-10 flex items-center justify-center will-change-pos w-16 h-16 md:w-24 md:h-24`}
                                 style={{ left: `${t.initialX}%`, top: `${t.initialY}%`, transform: 'translate3d(0,0,0)' }} 
@@ -1773,39 +1921,33 @@ const GrowthLabGameComp = memo(({ navigateTo, playSound, profileImageUrl, openCh
                 </div>
             </div>
 
+            {/* Explications Jeu */}
             <div className="w-full max-w-5xl mx-auto mt-12 mb-12 p-8 md:p-12 bg-[#0a0a0a] border border-white/10 rounded-[2rem] relative overflow-hidden animate-reveal">
-                <div className="absolute top-0 right-0 w-64 h-64 bg-red-600/5 blur-[80px] rounded-full pointer-events-none"></div>
+                <div className="absolute top-0 right-0 w-96 h-96 bg-[radial-gradient(closest-side,rgba(220,38,38,0.1),transparent)] pointer-events-none"></div>
                 <div className="relative z-10 space-y-10">
                     <div className="flex items-center gap-4">
                         <Brain className="text-red-600 w-8 h-8 md:w-10 md:h-10" />
                         <h3 className="text-2xl md:text-4xl font-black text-white uppercase italic tracking-tighter">{t.logic_title}</h3>
                     </div>
-                    <p className="text-slate-400 text-lg md:text-xl font-medium leading-relaxed italic border-l-4 border-red-600/50 pl-6">
-                        "{t.logic_intro}"
-                    </p>
+                    <p className="text-slate-400 text-lg md:text-xl font-medium leading-relaxed italic border-l-4 border-red-600/50 pl-6">"{t.logic_intro}"</p>
                     <div className="space-y-8">
+                        {/* Logic points (inchangés, juste structure) */}
                         <div className="flex flex-col md:flex-row gap-4 md:gap-8 items-start group">
-                            <div className="p-4 bg-white/5 rounded-2xl border border-white/5 text-red-500 group-hover:bg-red-600 group-hover:text-white transition-all shadow-xl">
-                                <Clock size={28} />
-                            </div>
+                            <div className="p-4 bg-white/5 rounded-2xl border border-white/5 text-red-500 group-hover:bg-red-600 group-hover:text-white transition-all shadow-xl"><Clock size={28} /></div>
                             <div className="space-y-2">
                                 <h4 className="text-white font-black uppercase text-lg tracking-wider">{t.logic_p1_title}</h4>
                                 <p className="text-slate-400 text-sm md:text-base leading-relaxed">{t.logic_p1_desc}</p>
                             </div>
                         </div>
                         <div className="flex flex-col md:flex-row gap-4 md:gap-8 items-start group">
-                            <div className="p-4 bg-white/5 rounded-2xl border border-white/5 text-blue-400 group-hover:bg-blue-600 group-hover:text-white transition-all shadow-xl">
-                                <Target size={28} />
-                            </div>
+                            <div className="p-4 bg-white/5 rounded-2xl border border-white/5 text-blue-400 group-hover:bg-blue-600 group-hover:text-white transition-all shadow-xl"><Target size={28} /></div>
                             <div className="space-y-2">
                                 <h4 className="text-white font-black uppercase text-lg tracking-wider">{t.logic_p2_title}</h4>
                                 <p className="text-slate-400 text-sm md:text-base leading-relaxed">{t.logic_p2_desc}</p>
                             </div>
                         </div>
                         <div className="flex flex-col md:flex-row gap-4 md:gap-8 items-start group">
-                            <div className="p-4 bg-white/5 rounded-2xl border border-white/5 text-yellow-400 group-hover:bg-yellow-500 group-hover:text-black transition-all shadow-xl">
-                                <Zap size={28} />
-                            </div>
+                            <div className="p-4 bg-white/5 rounded-2xl border border-white/5 text-yellow-400 group-hover:bg-yellow-500 group-hover:text-black transition-all shadow-xl"><Zap size={28} /></div>
                             <div className="space-y-2">
                                 <h4 className="text-white font-black uppercase text-lg tracking-wider">{t.logic_p3_title}</h4>
                                 <p className="text-slate-400 text-sm md:text-base leading-relaxed">{t.logic_p3_desc}</p>
@@ -1829,10 +1971,12 @@ const GrowthLabGameComp = memo(({ navigateTo, playSound, profileImageUrl, openCh
   );
 });
 
-// SIMULATION LAZY LOAD POUR FICHIER UNIQUE (Evite le chargement au mount)
-const LazyGame = lazy(() => new Promise(resolve => {
-  setTimeout(() => resolve({ default: GrowthLabGameComp }), 0);
-}));
+// SIMULATION CODE SPLITTING
+// Wrapper simple sans Suspense (single file)
+const GameWrapper = memo(({ active, ...props }) => {
+    if (!active) return null;
+    return <GrowthLabGameComp {...props} />;
+});
 
 const MainContent = memo(({ view, profileImageUrl, t, experiences, stackData, testimonials, navigateTo, openChat, playSound, handleDownload, triggerSpell, openModal, copyDiscord, copyFeedback, sayHello }) => {
     return (
@@ -1874,7 +2018,7 @@ const MainContent = memo(({ view, profileImageUrl, t, experiences, stackData, te
 
             <Experiences experiences={experiences} onSpell={triggerSpell} t={t.exp} />
 
-            <section className="py-24 md:py-48 px-6 bg-black/80 md:backdrop-blur-3xl font-black relative cv-auto">
+            <section className="py-24 md:py-48 px-6 bg-[#020202] font-black relative cv-auto">
                <div className="max-w-6xl mx-auto text-center">
                   <div className="mb-20 md:mb-32 space-y-4 md:space-y-6"><p className="text-red-500 uppercase text-[10px] md:text-[11px] tracking-[1em]">{t.cursus.sub}</p><h3 className="text-5xl md:text-7xl lg:text-[90px] font-black text-white uppercase tracking-tighter italic opacity-95 leading-none">{t.cursus.title}</h3></div>
                   <CursusSectionComp t={t.cursus} />
@@ -1903,9 +2047,7 @@ const MainContent = memo(({ view, profileImageUrl, t, experiences, stackData, te
         )}
 
         {view === 'play' && (
-            <Suspense fallback={<div className="h-screen w-full flex items-center justify-center bg-black"><div className="animate-spin text-red-600"><Target size={40} /></div></div>}>
-                <LazyGame navigateTo={navigateTo} playSound={playSound} profileImageUrl={profileImageUrl} openChat={openChat} onSpell={triggerSpell} t={t.game} />
-            </Suspense>
+             <GameWrapper active={view === 'play'} navigateTo={navigateTo} playSound={playSound} profileImageUrl={profileImageUrl} openChat={openChat} onSpell={triggerSpell} t={t.game} />
         )}
         </main>
     );
@@ -1970,22 +2112,6 @@ const App = () => {
       }
     } catch (e) {}
   }, [isMuted]);
-
-  useEffect(() => {
-    const handleContext = (e) => e.preventDefault();
-    const handleKey = (e) => {
-      if (e.key === 'F12' || (e.ctrlKey && e.shiftKey && e.key === 'I') || (e.ctrlKey && e.key === 'u')) {
-        e.preventDefault();
-      }
-    };
-    document.addEventListener('contextmenu', handleContext);
-    document.addEventListener('keydown', handleKey);
-
-    return () => {
-      document.removeEventListener('contextmenu', handleContext);
-      document.removeEventListener('keydown', handleKey);
-    };
-  }, []);
 
   const navigateTo = useCallback((newView) => {
     setView(newView);
