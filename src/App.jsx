@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback, memo, useMemo, useReducer, useLayoutEffect } from 'react';
+import { createRoot } from 'react-dom/client';
 import { 
   Rocket, Users, Target, Mail, Gamepad2, Zap, ArrowRight,
   Search, Share2, MessageCircle, Cpu, Layers, 
@@ -12,6 +13,19 @@ import {
   Volume2, VolumeX, Copy, Bell, Gift, PieChart, Sliders,
   HelpCircle, Check, Unlock, MousePointer2, Keyboard, Fingerprint, FileText, Crosshair, ListTodo, Info, XCircle
 } from 'lucide-react';
+
+// --- DEBUG PERFORMANCE ---
+// Activer via window.__DEBUG_PERF__ = true dans la console
+const usePerformanceLogger = (componentName) => {
+  const renderCount = useRef(0);
+  useEffect(() => {
+    if (typeof window !== 'undefined' && window.__DEBUG_PERF__) {
+      renderCount.current++;
+      console.time(`[Render] ${componentName}`);
+      return () => console.timeEnd(`[Render] ${componentName}`);
+    }
+  });
+};
 
 // --- CONFIGURATION SYSTÈME SONORE ---
 const audioSystem = {
@@ -28,59 +42,86 @@ const audioSystem = {
   }
 };
 
-// --- HOOK OPTIMISATION: STABLE INTERSECTION OBSERVER (TRUE ONCE) ---
-const useInView = (ref, { threshold = 0.1, rootMargin = '0px', triggerOnce = true } = {}) => {
-  const [isInView, setIsInView] = useState(false);
-  const hasTriggered = useRef(false);
-  
+// --- HOOK OPTIMISATION: VISIBILITY CONTROL FOR ANIMATIONS ---
+// Bascule les animations en pause si l'élément n'est pas visible
+const useVisibilityControl = (ref, threshold = 0.1) => {
+  const [isVisible, setIsVisible] = useState(false); // Default false for performance
+
   useEffect(() => {
-    if (!ref.current || (triggerOnce && hasTriggered.current)) return;
+    const el = ref.current;
+    if (!el) return;
+
+    const observer = new IntersectionObserver(([entry]) => {
+      // Utilisation d'un state transitionnel pour éviter le flickering
+      if (entry.isIntersecting) {
+        setIsVisible(true);
+      } else {
+        setIsVisible(false);
+      }
+    }, { threshold });
+     
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [threshold]);
+   
+  return isVisible;
+};
+
+// --- HOOK: STABLE INTERSECTION OBSERVER (TRUE ONCE) ---
+// Used specifically for "Entry" animations (fade-in, etc.)
+const useInViewOnce = (ref, { threshold = 0.1, rootMargin = '0px' } = {}) => {
+  const [hasAppeared, setHasAppeared] = useState(false);
+  const hasTriggered = useRef(false);
+   
+  useEffect(() => {
+    const el = ref.current;
+    if (!el || hasTriggered.current) return;
 
     const observer = new IntersectionObserver(([entry]) => {
       if (entry.isIntersecting) {
-        setIsInView(true);
-        if (triggerOnce) {
-          hasTriggered.current = true;
-          observer.disconnect();
-        }
-      } else if (!triggerOnce) {
-        setIsInView(false);
+        setHasAppeared(true);
+        hasTriggered.current = true;
+        observer.disconnect();
       }
     }, { threshold, rootMargin });
-    
-    observer.observe(ref.current);
-    
-    return () => {
-      observer.disconnect();
-    };
-  }, [threshold, rootMargin, triggerOnce]);
-  
-  return isInView;
+     
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [threshold, rootMargin]);
+   
+  return hasAppeared;
 };
 
 // --- STYLES GLOBAUX OPTIMISÉS ---
+// Optimisations:
+// 1. Suppression des will-change globaux
+// 2. Introduction de content-visibility (cv-section)
+// 3. Classes .paused pour stopper les animations hors-viewport
+// 4. Refonte du sélecteur body.form-open pour éviter l'invalidation globale
 const GLOBAL_STYLES_STRING = `
   :root { scroll-behavior: smooth; }
   body { font-family: 'Inter', sans-serif; background: #020202; overflow-x: hidden; touch-action: pan-y; margin: 0; padding: 0; }
     
   /* Performance Utilities */
-  /* cv-auto removed from critical sections */
   .gpu-accel { transform: translate3d(0,0,0); backface-visibility: hidden; perspective: 1000px; }
-  .will-change-transform { will-change: transform; }
-  .will-change-opacity { will-change: opacity; }
-   
+  
+  /* Content Visibility: rendu paresseux pour les grosses sections */
+  .cv-section {
+    content-visibility: auto;
+    contain-intrinsic-size: 1px 800px; /* Estimation de la hauteur pour éviter le saut */
+  }
+
+  /* Animation Control */
+  .paused { animation-play-state: paused !important; }
+  .paused * { animation-play-state: paused !important; }
+
+  /* Will Change Strategy: Only on active hover/interaction */
+  .hover-gpu:hover { will-change: transform; }
+  
   @media (prefers-reduced-motion: no-preference) {
     .animate-pulse, .animate-bounce, .animate-spin-slow {
       animation-play-state: running;
     }
-  }
-
-  .animate-pulse, .animate-bounce, .animate-float, .animate-spin-slow {
-    will-change: transform, opacity;
-  }
-   
-  .animate-pulse:hover, .animate-bounce:hover {
-    will-change: transform;
   }
 
   ::-webkit-scrollbar { width: 5px; }
@@ -91,8 +132,8 @@ const GLOBAL_STYLES_STRING = `
     0%, 100% { transform: translate3d(0, 0, 0); } 
     50% { transform: translate3d(0, -10px, 0); } 
   }
-   
-  /* Animations avec fill-mode: both pour garantir l'état initial/final correct */
+    
+  /* Animations */
   .animate-reveal { animation: reveal 0.6s cubic-bezier(0.19, 1, 0.22, 1) both; }
   .animate-reveal-bottom { animation: reveal-bottom 0.6s cubic-bezier(0.19, 1, 0.22, 1) both; }
   .animate-slide-in-right { animation: slide-in-right 1s cubic-bezier(0.19, 1, 0.22, 1) both; }
@@ -119,8 +160,33 @@ const GLOBAL_STYLES_STRING = `
       animation: none !important;
       transition: none !important;
       transform: none !important;
-      opacity: 1 !important; /* Force visible si animations off */
+      opacity: 1 !important;
     }
+  }
+
+  /* --- MODE PERFORMANCE (FORMULAIRE OUVERT) --- */
+  /* Ciblage spécifique au lieu de "body *" pour éviter le recalc global */
+  body.form-open .app-content {
+    pointer-events: none;
+    filter: blur(2px); /* Optionnel: effet visuel léger */
+    transition: filter 0.3s ease;
+  }
+  
+  body.form-open .app-content * {
+    animation-play-state: paused !important;
+  }
+  
+  /* Interactions pour le formulaire et modales restent actives */
+  .modal-container {
+    pointer-events: auto !important;
+  }
+  
+  /* Optimisation des inputs */
+  .optimized-input {
+    transition-property: border-color, background-color, box-shadow;
+    transition-duration: 150ms;
+    transition-timing-function: ease-out;
+    will-change: auto; 
   }
 
   @keyframes reveal { from { opacity: 0; transform: translate3d(0, 15px, 0); } to { opacity: 1; transform: translate3d(0, 0, 0); } }
@@ -151,14 +217,17 @@ const GLOBAL_STYLES_STRING = `
   .animation-delay-2000 { animation-delay: 2s; }
 `;
 
-// Hook pour injecter les styles
+// Hook pour injecter les styles (Idempotent)
 const useGlobalStyles = () => {
   useLayoutEffect(() => {
+    if (document.getElementById('global-styles')) return;
     const style = document.createElement('style');
+    style.id = 'global-styles';
     style.innerHTML = GLOBAL_STYLES_STRING;
     document.head.appendChild(style);
     return () => {
-      document.head.removeChild(style);
+      // Ne pas supprimer en dev/hot reload pour éviter le FOUC
+      // document.head.removeChild(style);
     };
   }, []);
 };
@@ -166,14 +235,14 @@ const useGlobalStyles = () => {
 // --- GAME ASSETS (MEMOIZED) ---
 const GameAssets = {
   Lead: memo(() => (
-    <svg viewBox="0 0 100 100" className="w-full h-full drop-shadow-[0_0_10px_rgba(56,189,248,0.8)]">
+    <svg viewBox="0 0 100 100" className="w-full h-full drop-shadow-[0_0_5px_rgba(56,189,248,0.5)]">
       <circle cx="50" cy="50" r="45" fill="rgba(6,182,212,0.1)" stroke="#06b6d4" strokeWidth="2" />
       <circle cx="50" cy="50" r="25" fill="#06b6d4" className="animate-pulse" />
       <path d="M25,80 Q50,50 75,80" fill="#fff" />
     </svg>
   )),
   GoldenRocket: memo(() => (
-    <svg viewBox="0 0 100 100" className="w-full h-full drop-shadow-[0_0_15px_rgba(234,179,8,0.8)]">
+    <svg viewBox="0 0 100 100" className="w-full h-full drop-shadow-[0_0_5px_rgba(234,179,8,0.5)]">
       <defs>
         <linearGradient id="goldGrad" x1="0%" y1="0%" x2="100%" y2="100%">
           <stop offset="0%" stopColor="#fef08a" />
@@ -186,7 +255,7 @@ const GameAssets = {
     </svg>
   )),
   Partner: memo(() => (
-    <svg viewBox="0 0 100 100" className="w-full h-full drop-shadow-[0_0_15px_rgba(168,85,247,0.8)]">
+    <svg viewBox="0 0 100 100" className="w-full h-full drop-shadow-[0_0_5px_rgba(168,85,247,0.5)]">
       <defs>
         <linearGradient id="purpGrad" x1="0%" y1="0%" x2="0%" y2="100%">
           <stop offset="0%" stopColor="#d8b4fe" />
@@ -198,7 +267,7 @@ const GameAssets = {
     </svg>
   )),
   Bot: memo(() => (
-    <svg viewBox="0 0 100 100" className="w-full h-full drop-shadow-[0_0_10px_rgba(239,68,68,0.8)]">
+    <svg viewBox="0 0 100 100" className="w-full h-full drop-shadow-[0_0_5px_rgba(239,68,68,0.5)]">
       <rect x="25" y="25" width="50" height="50" rx="10" fill="#7f1d1d" stroke="#ef4444" strokeWidth="3" />
       <circle cx="40" cy="45" r="5" fill="#000" />
       <circle cx="60" cy="45" r="5" fill="#000" />
@@ -206,13 +275,13 @@ const GameAssets = {
     </svg>
   )),
   BadBuzz: memo(() => (
-    <svg viewBox="0 0 100 100" className="w-full h-full drop-shadow-[0_0_10px_rgba(249,115,22,0.8)]">
+    <svg viewBox="0 0 100 100" className="w-full h-full drop-shadow-[0_0_5px_rgba(249,115,22,0.5)]">
       <path d="M50,15 Q70,40 80,60 Q90,90 50,90 Q10,90 20,60 Q30,40 50,15" fill="#c2410c" stroke="#f97316" strokeWidth="2" />
       <path d="M50,25 Q60,45 65,60 Q70,80 50,80 Q30,80 35,60 Q40,45 50,25" fill="#fb923c" />
     </svg>
   )),
   Streak: memo(() => (
-    <svg viewBox="0 0 100 100" className="w-full h-full drop-shadow-[0_0_10px_rgba(59,130,246,0.8)]">
+    <svg viewBox="0 0 100 100" className="w-full h-full drop-shadow-[0_0_5px_rgba(59,130,246,0.5)]">
       <circle cx="50" cy="50" r="40" fill="rgba(29,78,216,0.2)" stroke="#3b82f6" strokeWidth="3" strokeDasharray="10 5" />
       <path d="M40,10 L50,0 L60,10" fill="none" stroke="#3b82f6" strokeWidth="2" className="animate-bounce" />
     </svg>
@@ -468,33 +537,10 @@ const VictoryCelebration = memo(() => {
             });
         }
 
-        const render = () => {
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-            
-            particles.forEach(p => {
-                p.y += p.vy;
-                p.x += Math.sin(p.wobble) * 1;
-                p.wobble += 0.05;
-
-                // Reset si en bas, mais arrêt progressif après 5s géré par parent si besoin
-                if (p.y > canvas.height) {
-                    p.y = -10;
-                    p.x = Math.random() * canvas.width;
-                }
-
-                ctx.fillStyle = p.color;
-                ctx.beginPath();
-                ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
-                ctx.fill();
-            });
-
-            animationFrameId = requestAnimationFrame(render);
-        };
-
         // Limiter le framerate à ~30fps pour économiser le GPU
         let lastTime = 0;
         const fpsInterval = 1000 / 30;
-        
+         
         const loop = (timestamp) => {
             animationFrameId = requestAnimationFrame(loop);
             const elapsed = timestamp - lastTime;
@@ -555,7 +601,7 @@ const QuestTracker = memo(({ found, t }) => {
   const hasWord2 = found.includes('alohomora');
   const hasWord3 = found.includes('wingardium');
   const hasHighScore = found.includes('highscore');
-        
+         
   const wordCount = [hasWord1, hasWord2, hasWord3].filter(Boolean).length;
 
   useEffect(() => {
@@ -756,41 +802,16 @@ const SkillRadar = memo(({t}) => {
 // --- (1) OPTIMIZED TECH STACK TICKER ---
 const TechStackTicker = memo(({t}) => {
     const containerRef = useRef(null);
-    const [isPaused, setPaused] = useState(false);
+    const isVisible = useVisibilityControl(containerRef);
     const stack = useMemo(() => ["Meta Ads", "Google Ads", "GA4", "SEO Technical", "TikTok Ads", "HubSpot", "Zapier", "Copywriting", "Viral Loops", "Looker Studio", "Notion", "LinkedIn Growth"], []);
     
-    useEffect(() => {
-        // Pauser l'animation si l'onglet n'est pas actif
-        const handleVisibilityChange = () => {
-            setPaused(document.hidden);
-        };
-        document.addEventListener("visibilitychange", handleVisibilityChange);
-
-        // Pauser l'animation si le composant n'est pas visible à l'écran
-        const observer = new IntersectionObserver(([entry]) => {
-            setPaused(!entry.isIntersecting);
-        }, { threshold: 0 });
-
-        if (containerRef.current) {
-            observer.observe(containerRef.current);
-        }
-
-        return () => {
-            document.removeEventListener("visibilitychange", handleVisibilityChange);
-            observer.disconnect();
-        };
-    }, []);
-
     return (
-        <div ref={containerRef} className="w-full overflow-hidden border-y border-white/5 bg-[#020202] py-4 relative contain-content">
+        <div ref={containerRef} className={`w-full overflow-hidden border-y border-white/5 bg-[#020202] py-4 relative ${!isVisible ? 'paused' : ''}`} style={{ contain: 'content' }}>
             <div className="absolute left-0 top-0 bottom-0 w-12 bg-gradient-to-r from-[#0a0a0a] to-transparent z-10 pointer-events-none" />
             <div className="absolute right-0 top-0 bottom-0 w-12 bg-gradient-to-l from-[#0a0a0a] to-transparent z-10 pointer-events-none" />
             
             {/* Duplication réduite : seulement 2 copies nécessaires pour une boucle fluide si transform -50% */}
-            <div 
-                className="flex whitespace-nowrap animate-scroll-normal will-change-transform" 
-                style={{ animationPlayState: isPaused ? 'paused' : 'running' }}
-            >
+            <div className="flex whitespace-nowrap animate-scroll-normal will-change-transform">
                 {[...stack, ...stack].map((item, i) => (
                     <span key={i} className="mx-6 text-slate-500 font-black uppercase text-[10px] tracking-widest flex items-center gap-2 transform-gpu">
                         <div className="w-1 h-1 bg-red-600 rounded-full" /> {item}
@@ -819,10 +840,11 @@ const TrustStrip = memo(({ lang, t }) => (
 
 const TestimonialsSection = memo(({ testimonials, t }) => {
   const containerRef = useRef(null);
-  const isVisible = useInView(containerRef, { triggerOnce: true });
+  const isVisible = useVisibilityControl(containerRef);
+  usePerformanceLogger("TestimonialsSection");
 
   return (
-    <section ref={containerRef} className={`py-16 md:py-40 px-6 relative font-black border-t border-white/5 ${isVisible ? 'opacity-100' : 'opacity-0'} transition-opacity duration-1000`}>
+    <section ref={containerRef} className={`cv-section py-16 md:py-40 px-6 relative font-black border-t border-white/5 transition-opacity duration-1000 ${isVisible ? 'opacity-100' : 'opacity-0 paused'}`}>
       <div className="max-w-7xl mx-auto space-y-12 md:space-y-24">
         <div className="text-center space-y-4">
           <p className="text-red-500 font-black uppercase text-[10px] md:text-[11px] tracking-[0.8em]">{t.sub}</p>
@@ -854,12 +876,12 @@ const MemoizedMissionButton = memo(({ stack, isSelected, onClick }) => {
     return (
         <button onClick={onClick} className={`relative px-6 py-5 rounded-2xl border text-left flex items-start justify-between gap-4 group active:scale-95 transition-colors duration-200 ${isSelected ? 'bg-red-600 border-red-600 text-white' : 'bg-white/5 border-white/5 text-slate-400 hover:bg-white/10'}`}>
             {stack.popular && (
-            <div className="absolute -top-3 -right-2 bg-gradient-to-r from-orange-500 to-red-600 text-white text-[9px] font-black uppercase px-3 py-1 rounded-full shadow-lg animate-pulse z-10 border border-black flex items-center gap-1">
+            <div className="absolute -top-3 -right-2 bg-gradient-to-r from-orange-500 to-red-600 text-white text-[9px] font-black uppercase px-3 py-1 rounded-full shadow-lg z-10 border border-black flex items-center gap-1">
                 <Flame size={10} fill="white" /> Top
             </div>
             )}
             {stack.isNew && (
-            <div className="absolute -top-3 -right-2 bg-gradient-to-r from-emerald-500 to-emerald-700 text-white text-[9px] font-black uppercase px-3 py-1 rounded-full shadow-lg animate-pulse z-10 border border-black flex items-center gap-1">
+            <div className="absolute -top-3 -right-2 bg-gradient-to-r from-emerald-500 to-emerald-700 text-white text-[9px] font-black uppercase px-3 py-1 rounded-full shadow-lg z-10 border border-black flex items-center gap-1">
                 <Sparkles size={10} fill="white" /> NEW
             </div>
             )}
@@ -899,11 +921,16 @@ const CollaborationForm = memo(({ onClose, playSound, t, stackData, questComplet
     playSound(600, 'triangle', 0.3);
   };
 
+  const handleContainerClick = (e) => {
+     // Empêche le clic de remonter et de déclencher des listeners globaux s'il y en a
+     e.stopPropagation();
+  };
+
   return (
-    <div className="fixed inset-0 z-[600] flex items-center justify-center p-4 md:p-6 animate-quick-pop">
+    <div className="fixed inset-0 z-[600] flex items-center justify-center p-4 md:p-6 animate-quick-pop modal-container" onClick={handleContainerClick}>
       <div className="absolute inset-0 bg-black/95" onClick={onClose} />
-      <div className="relative w-full max-w-4xl bg-[#0a0a0a] border border-white/10 rounded-[2rem] md:rounded-[3rem] shadow-3xl border-b-4 border-b-red-600 overflow-hidden flex flex-col max-h-[90vh]">
-        <div className="flex items-center justify-between p-6 md:p-8 border-b border-white/5 bg-black/50 sticky top-0 z-10">
+      <div className="relative w-full max-w-4xl bg-[#0a0a0a] border border-white/10 rounded-[2rem] md:rounded-[3rem] shadow-3xl border-b-4 border-b-red-600 overflow-hidden flex flex-col max-h-[90vh] will-change-transform">
+        <div className="flex items-center justify-between p-6 md:p-8 border-b border-white/5 bg-black sticky top-0 z-10">
           <h3 className="text-xl md:text-2xl font-black text-white uppercase tracking-tighter italic">{t.title}</h3>
           <button onClick={onClose} className="text-slate-500 hover:text-white transition bg-white/5 p-3 rounded-full hover:rotate-90 duration-300"><X size={20} /></button>
         </div>
@@ -973,7 +1000,7 @@ const CollaborationForm = memo(({ onClose, playSound, t, stackData, questComplet
                 {formData.type === 'freelance' && (
                   <div className="space-y-2">
                     <label className="text-red-500 font-black uppercase text-[10px] tracking-[0.2em]">{t.duration}</label>
-                    <select required className="w-full bg-white/5 border border-white/10 rounded-2xl px-6 py-4 text-white text-sm focus:border-red-600 outline-none appearance-none font-bold cursor-pointer hover:bg-white/10 transition-colors" onChange={(e) => setFormData({...formData, duration: e.target.value})}>
+                    <select required className="optimized-input w-full bg-white/5 border border-white/10 rounded-2xl px-6 py-4 text-white text-sm focus:border-red-600 outline-none appearance-none font-bold cursor-pointer hover:bg-white/10" onChange={(e) => setFormData({...formData, duration: e.target.value})}>
                       <option value="" className="bg-black text-slate-500">{t.sel_duration}</option>
                       <option value="ponctuel" className="bg-black">{t.d_one}</option>
                       <option value="1-3mois" className="bg-black">{t.d_short}</option>
@@ -986,7 +1013,7 @@ const CollaborationForm = memo(({ onClose, playSound, t, stackData, questComplet
                   <label className="text-red-500 font-black uppercase text-[10px] tracking-[0.2em]">{t.loc}</label>
                   <div className="flex gap-2">
                     {['remote', 'presential', 'hybrid'].map(loc => (
-                      <button key={loc} type="button" onClick={() => setFormData({...formData, location: loc})} className={`flex-1 py-4 rounded-2xl border text-[10px] font-black uppercase tracking-wider transition-all ${formData.location === loc ? 'bg-white text-black border-white' : 'bg-white/5 border-white/5 text-slate-500 hover:bg-white/10'}`}>
+                      <button key={loc} type="button" onClick={() => setFormData({...formData, location: loc})} className={`flex-1 py-4 rounded-2xl border text-[10px] font-black uppercase tracking-wider transition-colors duration-200 ${formData.location === loc ? 'bg-white text-black border-white' : 'bg-white/5 border-white/5 text-slate-500 hover:bg-white/10'}`}>
                         {loc === 'remote' ? t.l_rem : loc === 'presential' ? t.l_site : t.l_hyb}
                       </button>
                     ))}
@@ -996,31 +1023,31 @@ const CollaborationForm = memo(({ onClose, playSound, t, stackData, questComplet
 
               <div className="space-y-2">
                 <label className="text-red-500 font-black uppercase text-[10px] tracking-[0.2em]">{t.proj_label}</label>
-                <textarea required placeholder={t.proj_placeholder} className="w-full h-32 bg-white/5 border border-white/10 rounded-3xl px-6 py-5 text-white text-sm focus:border-red-600 outline-none resize-none font-medium placeholder:text-slate-600 transition-colors focus:bg-white/10" onChange={(e) => setFormData({...formData, project: e.target.value})}></textarea>
+                <textarea required placeholder={t.proj_placeholder} className="optimized-input w-full h-32 bg-white/5 border border-white/10 rounded-3xl px-6 py-5 text-white text-sm focus:border-red-600 outline-none resize-none font-medium placeholder:text-slate-600 focus:bg-white/10" onChange={(e) => setFormData({...formData, project: e.target.value})}></textarea>
               </div>
 
               <div className="space-y-2">
                 <label className="text-red-500 font-black uppercase text-[10px] tracking-[0.2em]">{t.email_label}</label>
-                <input required type="email" placeholder="contact@entreprise.com" className="w-full bg-white/5 border border-white/10 rounded-2xl px-6 py-5 text-white text-sm focus:border-red-600 outline-none font-bold placeholder:text-slate-600 transition-colors focus:bg-white/10" onChange={(e) => setFormData({...formData, email: e.target.value})} />
+                <input required type="email" placeholder="contact@entreprise.com" className="optimized-input w-full bg-white/5 border border-white/10 rounded-2xl px-6 py-5 text-white text-sm focus:border-red-600 outline-none font-bold placeholder:text-slate-600 focus:bg-white/10" onChange={(e) => setFormData({...formData, email: e.target.value})} />
               </div>
 
               <div className="pt-4 flex gap-4">
-                <button type="button" onClick={() => setStep(1)} className="px-8 py-6 rounded-2xl border border-white/10 text-white font-black uppercase hover:bg-white/5 transition-all text-xs tracking-widest">{t.btn_back}</button>
-                <button type="submit" className="flex-1 bg-red-600 text-white py-6 rounded-2xl font-black uppercase tracking-[0.2em] hover:bg-white hover:text-black transition-all shadow-glow-red active:scale-95 flex items-center justify-center gap-3">{t.btn_send} <Send size={18} /></button>
+                <button type="button" onClick={() => setStep(1)} className="px-8 py-6 rounded-2xl border border-white/10 text-white font-black uppercase hover:bg-white/5 transition-colors duration-200 text-xs tracking-widest">{t.btn_back}</button>
+                <button type="submit" className="flex-1 bg-red-600 text-white py-6 rounded-2xl font-black uppercase tracking-[0.2em] hover:bg-white hover:text-black transition-colors duration-200 shadow-glow-red active:scale-95 flex items-center justify-center gap-3">{t.btn_send} <Send size={18} /></button>
               </div>
             </form>
           )}
 
           {step === 3 && (
             <div className="flex flex-col items-center justify-center py-10 text-center space-y-8 animate-reveal">
-              <div className="w-24 h-24 bg-emerald-500 rounded-full flex items-center justify-center shadow-glow-emerald animate-bounce">
+              <div className="w-24 h-24 bg-emerald-500 rounded-full flex items-center justify-center shadow-glow-emerald">
                 <CheckCircle size={40} className="text-black" />
               </div>
               <div className="space-y-4">
                 <h4 className="text-3xl font-black text-white uppercase tracking-tighter">{t.success_title}</h4>
                 <p className="text-slate-400 font-medium max-w-md mx-auto">{t.success_msg} <span className="text-white">{formData.email}</span>.</p>
               </div>
-              <button onClick={onClose} className="bg-white text-black px-12 py-5 rounded-2xl font-black uppercase tracking-widest text-xs hover:bg-emerald-500 hover:text-black transition-all mt-8">{t.close}</button>
+              <button onClick={onClose} className="bg-white text-black px-12 py-5 rounded-2xl font-black uppercase tracking-widest text-xs hover:bg-emerald-500 hover:text-black transition-colors duration-200 mt-8">{t.close}</button>
             </div>
           )}
         </div>
@@ -1032,7 +1059,7 @@ const CollaborationForm = memo(({ onClose, playSound, t, stackData, questComplet
 const Modal = memo(({ isOpen, onClose, children }) => {
   if (!isOpen) return null;
   return (
-    <div className="fixed inset-0 z-[500] flex items-center justify-center p-4 md:p-6 animate-quick-pop">
+    <div className="fixed inset-0 z-[500] flex items-center justify-center p-4 md:p-6 animate-quick-pop modal-container" onClick={(e) => e.stopPropagation()}>
       <div className="absolute inset-0 bg-black/90" onClick={onClose} />
       <div className="relative w-full max-w-xl bg-[#0d0d0d] border border-white/10 rounded-[2rem] md:rounded-[3rem] shadow-3xl border-b-4 border-b-red-600 overflow-hidden transform transition-all will-change-transform">
         <button onClick={onClose} className="absolute top-6 right-6 md:top-8 md:right-8 text-slate-500 hover:text-white transition bg-white/5 p-3 rounded-full z-20 hover:rotate-90 duration-300"><X size={20} /></button>
@@ -1046,6 +1073,7 @@ const Modal = memo(({ isOpen, onClose, children }) => {
 
 const HeroSection = memo(({ openChat, playSound, profileImageUrl, t, handleDownload, triggerLongPress }) => {
     const pressTimer = useRef(null);
+    usePerformanceLogger("HeroSection");
 
     const handlePointerDown = () => {
         pressTimer.current = setTimeout(() => {
@@ -1058,7 +1086,7 @@ const HeroSection = memo(({ openChat, playSound, profileImageUrl, t, handleDownl
     };
 
     return (
-      <section id="hero" className="relative pt-40 md:pt-72 pb-24 md:pb-48 px-6 font-black">
+      <section id="hero" className="relative pt-40 md:pt-72 pb-24 md:pb-48 px-6 font-black cv-section">
         <div className="absolute top-0 left-0 w-full h-full bg-gradient-to-b from-red-900/10 via-transparent to-[#020202] -z-10" />
         <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full h-[800px] md:h-[1200px] bg-[radial-gradient(circle_at_50%_0%,rgba(220,38,38,0.15)_0%,transparent_70%)] -z-10" />
         <div className="absolute bottom-0 left-0 w-full h-40 bg-gradient-to-t from-[#020202] to-transparent -z-10" />
@@ -1069,7 +1097,7 @@ const HeroSection = memo(({ openChat, playSound, profileImageUrl, t, handleDownl
               <Sparkles size={16} className="animate-pulse text-yellow-500" /> {t.badge}
             </div>
             <h1 
-                className="text-5xl sm:text-6xl md:text-7xl lg:text-8xl font-black text-white tracking-tighter leading-[0.9] lg:leading-[0.8] uppercase italic animate-fade-in-up delay-100 select-none cursor-pointer active:scale-[0.98] transition-transform w-full break-words whitespace-normal"
+                className="text-5xl sm:text-6xl md:text-7xl lg:text-8xl font-black text-white tracking-tighter leading-[0.9] lg:leading-[0.8] uppercase italic animate-fade-in-up delay-100 select-none cursor-pointer active:scale-[0.98] transition-transform w-full break-words whitespace-normal hover-gpu"
                 onPointerDown={handlePointerDown}
                 onPointerUp={handlePointerUp}
                 onPointerCancel={handlePointerUp}
@@ -1096,8 +1124,9 @@ const HeroSection = memo(({ openChat, playSound, profileImageUrl, t, handleDownl
                   srcSet={`${profileImageUrl}?w=400 400w, ${profileImageUrl}?w=800 800w, ${profileImageUrl}?w=1200 1200w`}
                   sizes="(max-width: 768px) 100vw, 50vw"
                   alt="Lucien Lukes Freelance Marketing Montpellier France" 
-                  className="w-full h-full object-cover object-top brightness-110 contrast-105 will-change-transform" 
-                  loading="lazy"
+                  className="w-full h-full object-cover object-top brightness-110 contrast-105 hover-gpu transition-transform duration-500 group-hover:scale-105" 
+                  loading="eager"
+                  fetchpriority="high"
                   decoding="async"
               />
             </div>
@@ -1129,13 +1158,16 @@ const HeroSection = memo(({ openChat, playSound, profileImageUrl, t, handleDownl
 const Experiences = memo(({ experiences, onSpell, t }) => {
   const containerRef = useRef(null);
   const progressRef = useRef(null);
-  const isVisible = useInView(containerRef, { triggerOnce: true });
+  const isVisible = useVisibilityControl(containerRef);
+  // Pour l'apparition initiale (reveal)
+  const hasAppeared = useInViewOnce(containerRef);
+  usePerformanceLogger("Experiences");
 
   useEffect(() => {
     let ticking = false;
     let containerRect = { top: 0, height: 0 };
     let resizeTimer; // For debounce
-    
+     
     // Initial measure
     const updateMetrics = () => {
       if (containerRef.current) {
@@ -1144,26 +1176,33 @@ const Experiences = memo(({ experiences, onSpell, t }) => {
         containerRect = { top: r.top + scrollTop, height: r.height };
       }
     };
-    
+     
     // Optimized scroll handler (ticking)
     const onScroll = () => {
+      // Guard: si le composant n'est pas visible, on ne fait rien
+      if (!isVisible && containerRef.current) {
+          // Fallback check in case isVisible state hasn't updated yet but we are scrolling fast
+          const rect = containerRef.current.getBoundingClientRect();
+          if (rect.bottom < 0 || rect.top > window.innerHeight) return;
+      }
+
       if (!ticking) {
         window.requestAnimationFrame(() => {
           if (!progressRef.current || containerRect.height === 0) {
             ticking = false;
             return;
           }
-          
+           
           const scrollY = window.scrollY;
           const startOffset = window.innerHeight / 2;
           const triggerPoint = containerRect.top - startOffset;
-          
+           
           let progress = (scrollY - triggerPoint) / containerRect.height;
           progress = Math.max(0, Math.min(progress, 1));
-          
+           
           // GPU Optimization with translateZ
           progressRef.current.style.transform = `scaleY(${progress}) translateZ(0)`;
-          
+           
           ticking = false;
         });
         ticking = true;
@@ -1189,17 +1228,17 @@ const Experiences = memo(({ experiences, onSpell, t }) => {
     window.addEventListener('scroll', onScroll, { passive: true });
     window.addEventListener('resize', onResizeOrOrientation, { passive: true });
     window.addEventListener('orientationchange', onResizeOrOrientation, { passive: true });
-    
+     
     return () => {
         window.removeEventListener('scroll', onScroll);
         window.removeEventListener('resize', onResizeOrOrientation);
         window.removeEventListener('orientationchange', onResizeOrOrientation);
         clearTimeout(resizeTimer);
     }
-  }, []);
+  }, [isVisible]);
 
   return (
-    <section id="missions" ref={containerRef} className={`py-16 md:py-32 px-6 relative font-black ${isVisible ? 'opacity-100' : 'opacity-0'} transition-opacity duration-1000`}>
+    <section id="missions" ref={containerRef} className={`py-16 md:py-32 px-6 relative font-black cv-section ${hasAppeared ? 'opacity-100' : 'opacity-0'} transition-opacity duration-1000 ${!isVisible ? 'paused' : ''}`}>
       <div className="absolute top-0 left-0 w-full h-full bg-gradient-to-b from-transparent via-red-600/5 to-transparent -z-10" />
       <div className="max-w-6xl mx-auto space-y-12 md:space-y-32">
         <div className="text-center space-y-6">
@@ -1213,7 +1252,7 @@ const Experiences = memo(({ experiences, onSpell, t }) => {
 
           {experiences.map((exp, i) => (
             <div key={i} className={`relative flex flex-col md:flex-row items-center gap-8 md:gap-20 group ${i % 2 === 0 ? 'md:flex-row' : 'md:flex-row-reverse'} animate-reveal font-black`}>
-              <div className="absolute left-[20px] md:left-1/2 md:-translate-x-1/2 w-10 h-10 rounded-full bg-black border-4 border-red-600 z-20 group-hover:scale-150 transition-all duration-500 hidden md:block shadow-glow-red font-black" />
+              <div className="absolute left-[20px] md:left-1/2 md:-translate-x-1/2 w-10 h-10 rounded-full bg-black border-4 border-red-600 z-20 hover-gpu group-hover:scale-150 transition-all duration-500 hidden md:block shadow-glow-red font-black" />
               <div className={`w-full md:w-[45%] p-6 md:p-16 rounded-[2rem] md:rounded-[5rem] transition-all duration-1000 relative overflow-hidden font-black ${exp.isPoudlard ? 'bg-[#0a0a0a] border-amber-500/40 shadow-2xl ring-1 ring-amber-500/20' : 'bg-slate-900 border-white/10 hover:bg-slate-900 group-hover:border-red-500/40 shadow-3xl'}`}>
                 {exp.isPoudlard && <div className="absolute top-0 right-0 bg-amber-500 px-6 py-3 md:px-10 md:py-4 rounded-bl-[2rem] md:rounded-bl-[2.5rem] font-black text-[9px] md:text-[11px] text-black tracking-widest uppercase flex items-center gap-2 md:gap-3 shadow-2xl font-black"><span className="animate-spin-slow"><Sparkles size={14} fill="black" /></span> Projet Pilier</div>}
                 <div className="space-y-6 md:space-y-12 font-black">
@@ -1226,7 +1265,7 @@ const Experiences = memo(({ experiences, onSpell, t }) => {
                             </h3>
                         </a>
                     ) : (
-                        <h3 className="text-3xl md:text-5xl font-black text-white uppercase tracking-tighter leading-none group-hover:translate-x-2 transition-transform duration-500">{exp.company}</h3>
+                        <h3 className="text-3xl md:text-5xl font-black text-white uppercase tracking-tighter leading-none hover-gpu group-hover:translate-x-2 transition-transform duration-500">{exp.company}</h3>
                     )}
                     <p className="text-slate-500 font-bold uppercase text-[9px] md:text-[11px] tracking-[0.3em] md:tracking-[0.4em] italic">{exp.role}</p>
                   </div>
@@ -1244,7 +1283,7 @@ const Experiences = memo(({ experiences, onSpell, t }) => {
                   <div className="grid grid-cols-1 gap-4 md:gap-6 pt-8 md:pt-12 border-t border-white/10 font-black">
                       {exp.details.map((d, idx) => (
                         <div key={idx} className="flex items-start gap-4 md:gap-6 text-base md:text-lg font-medium text-slate-300 hover:text-white transition-all group/item duration-300">
-                          <ChevronRight className={`mt-1 flex-shrink-0 w-5 h-5 md:w-6 md:h-6 ${exp.isPoudlard ? 'text-amber-500' : 'text-red-600'} group-hover/item:translate-x-2 transition-transform`} />
+                          <ChevronRight className={`mt-1 flex-shrink-0 w-5 h-5 md:w-6 md:h-6 ${exp.isPoudlard ? 'text-amber-500' : 'text-red-600'} hover-gpu group-hover/item:translate-x-2 transition-transform`} />
                           {d}
                         </div>
                       ))}
@@ -1287,11 +1326,11 @@ const CursusSectionComp = memo(({ t }) => (
 
 const SectionBio = memo(({ profileImageUrl, navigateTo, copyDiscord, copyFeedback, playSound, onSpell, t, handleDownload, sayHello }) => {
   const containerRef = useRef(null);
-  // Visibilité simple sans condition opacity-0 pour éviter le FOUC/disparition
-  const isVisible = useInView(containerRef, { triggerOnce: true });
+  const isVisible = useVisibilityControl(containerRef);
+  usePerformanceLogger("SectionBio");
 
   return (
-  <div ref={containerRef} className={`pt-24 md:pt-40 pb-16 md:pb-24 px-6 animate-reveal font-black`}>
+  <div ref={containerRef} className={`pt-24 md:pt-40 pb-16 md:pb-24 px-6 animate-reveal font-black ${!isVisible ? 'paused' : ''}`}>
     <div className="max-w-7xl mx-auto">
       <div className="mb-12 md:mb-20 space-y-6">
         <p className="text-red-500 font-black uppercase text-[11px] tracking-[1em] animate-fade-in-up">{t.sub}</p>
@@ -1308,7 +1347,7 @@ const SectionBio = memo(({ profileImageUrl, navigateTo, copyDiscord, copyFeedbac
                 srcSet={`${profileImageUrl}?w=400 400w, ${profileImageUrl}?w=800 800w, ${profileImageUrl}?w=1200 1200w`}
                 sizes="(max-width: 768px) 100vw, 50vw"
                 alt="Consultant influence marketing & Freelance marketing France" 
-                className="w-full h-full object-cover object-top transition-transform duration-700 group-hover:scale-105 will-change-transform" 
+                className="w-full h-full object-cover object-top hover-gpu transition-transform duration-700 group-hover:scale-105" 
                 loading="lazy"
                 decoding="async"
             />
@@ -1461,7 +1500,7 @@ const gameReducer = (state, action) => {
         return { ...state, clickFeedbacks: state.clickFeedbacks.filter(f => f.id !== action.payload) };
     case 'RETRY':
         return { ...initialGameState, showBriefing: true, score: 0 };
-    
+     
     // --- ATOMIC SCORE LOGIC ---
     case 'TARGET_HIT': {
         const { targetType, id, x, y, feedbackId } = action.payload;
@@ -1519,9 +1558,12 @@ const gameReducer = (state, action) => {
             clickFeedbacks: [...state.clickFeedbacks, { id: feedbackId, x, y, msg, color }]
         };
     }
-    
+     
     case 'RESET_MULTIPLIER':
         return { ...state, multiplier: Math.max(1, state.multiplier - 1) };
+
+    case 'REMOVE_FEEDBACK_BY_ID':
+        return { ...state, clickFeedbacks: state.clickFeedbacks.filter(f => f.id !== action.payload) };
 
     default:
       return state;
@@ -1536,9 +1578,21 @@ const GrowthLabGameComp = memo(({ navigateTo, playSound, profileImageUrl, openCh
   const gameAreaRef = useRef(null);
   const visualUpdateRef = useRef(null);
   const isVisibleRef = useRef(false);
+  const deadIdsRef = useRef(new Set()); // To track removed targets
 
   const targetsPhysics = useRef([]);
   const targetElementsRef = useRef({});
+
+  const idCounter = useRef(0);
+  const generateId = () => {
+    idCounter.current += 1;
+    return idCounter.current;
+  };
+   
+  const comboRef = useRef(combo);
+  useEffect(() => {
+    comboRef.current = combo;
+  }, [combo]);
 
   // Observation de visibilité pour mettre en pause la loop physique
   useEffect(() => {
@@ -1556,6 +1610,20 @@ const GrowthLabGameComp = memo(({ navigateTo, playSound, profileImageUrl, openCh
   const scoreStyle = useMemo(() => ({
     transform: `scale(${1 + Math.min(combo * 0.1, 0.5)})`
   }), [combo]);
+
+  // Remove feedbacks automatically
+  useEffect(() => {
+    // Only schedule if feedbacks exist to avoid effect churn
+    if (clickFeedbacks.length > 0) {
+        const idToRemove = clickFeedbacks[0].id;
+        const timer = setTimeout(() => {
+             // This dispatches an action to remove the *specific* feedback ID
+             // The reducer handles the filtering
+            dispatch({ type: 'REMOVE_FEEDBACK_BY_ID', payload: idToRemove });
+        }, 800);
+        return () => clearTimeout(timer);
+    }
+  }, [clickFeedbacks]);
 
   // GAME LOOP OPTIMISÉE (Adaptive FPS)
   useEffect(() => {
@@ -1660,7 +1728,7 @@ const GrowthLabGameComp = memo(({ navigateTo, playSound, profileImageUrl, openCh
         if (targetsPhysics.current.length >= 8) return;
         if (!isVisibleRef.current || document.hidden) return; // Pas de spawn si caché
 
-        const id = Math.random();
+        const id = generateId();
         const rand = Math.random();
         let type = 'lead';
         if (rand < 0.08) type = 'golden_rocket';
@@ -1690,9 +1758,14 @@ const GrowthLabGameComp = memo(({ navigateTo, playSound, profileImageUrl, openCh
         dispatch({ type: 'ADD_TARGET', payload: { id, type, initialX: startX, initialY: startY } });
 
         setTimeout(() => {
-            dispatch({ type: 'REMOVE_TARGET', payload: id });
-            targetsPhysics.current = targetsPhysics.current.filter(t => t.id !== id);
-            delete targetElementsRef.current[id];
+            // Check if target still exists in physics (it might have been clicked)
+            // Use deadIdsRef to be safer
+             if (!deadIdsRef.current.has(id)) {
+                deadIdsRef.current.add(id);
+                dispatch({ type: 'REMOVE_TARGET', payload: id });
+                targetsPhysics.current = targetsPhysics.current.filter(t => t.id !== id);
+                delete targetElementsRef.current[id];
+            }
         }, 1500);
 
       }, panicMode ? 150 : 280); 
@@ -1751,24 +1824,44 @@ const GrowthLabGameComp = memo(({ navigateTo, playSound, profileImageUrl, openCh
   const startGame = useCallback(() => {
     dispatch({ type: 'START_GAME' });
     targetsPhysics.current = [];
+    deadIdsRef.current = new Set(); // Reset dead ids
     playSound(440, 'sine', 0.3);
   }, [playSound]);
 
-  const handleTargetClick = useCallback((type, id) => { 
+  const handleTargetClick = useCallback((e, type, id) => { 
+    // Prevent double clicking
+    if (deadIdsRef.current.has(id)) return;
+    deadIdsRef.current.add(id);
+
     const targetPhys = targetsPhysics.current.find(t => t.id === id);
-    const currentX = targetPhys ? targetPhys.x : 50;
-    const currentY = targetPhys ? targetPhys.y : 50;
-    const feedbackId = Math.random();
+    let currentX, currentY;
+     
+    if (targetPhys) {
+        currentX = targetPhys.x;
+        currentY = targetPhys.y;
+    } else if (gameAreaRef.current) {
+        // Fallback if targetPhys missing but clicked (race condition)
+        const rect = gameAreaRef.current.getBoundingClientRect();
+        currentX = ((e.clientX - rect.left) / rect.width) * 100;
+        currentY = ((e.clientY - rect.top) / rect.height) * 100;
+        // Clamp to 0-100 just in case
+        currentX = Math.max(0, Math.min(100, currentX));
+        currentY = Math.max(0, Math.min(100, currentY));
+    } else {
+        currentX = 50;
+        currentY = 50;
+    }
+     
+    const feedbackId = generateId();
 
     dispatch({ type: 'TARGET_HIT', payload: { targetType: type, id, x: currentX, y: currentY, feedbackId } });
-    
-    // Auto-remove feedback after 800ms
-    setTimeout(() => {
-        dispatch({ type: 'REMOVE_FEEDBACK', payload: feedbackId }); 
-    }, 800);
+     
+    // Using useEffect to remove feedback, so no need for setTimeout here anymore as requested
+
+    const currentCombo = comboRef.current;
 
     switch(type) {
-      case 'lead': playSound(880 + (combo * 20)); break;
+      case 'lead': playSound(880 + (currentCombo * 20)); break;
       case 'golden_rocket': 
         playSound(1300, 'square'); 
         setTimeout(() => dispatch({ type: 'RESET_MULTIPLIER' }), 5000); 
@@ -1781,10 +1874,10 @@ const GrowthLabGameComp = memo(({ navigateTo, playSound, profileImageUrl, openCh
 
     targetsPhysics.current = targetsPhysics.current.filter(t => t.id !== id);
     delete targetElementsRef.current[id];
-  }, [combo, playSound]);
+  }, [playSound]); // Removed combo dependency
 
   return (
-    <div className="pt-24 md:pt-40 pb-24 md:pb-40 px-6 font-black animate-reveal min-h-screen relative flex flex-col items-center justify-start overflow-hidden cv-auto">
+    <div className="pt-24 md:pt-40 pb-24 md:pb-40 px-6 font-black animate-reveal min-h-screen relative flex flex-col items-center justify-start overflow-hidden">
         {/* Background static léger */}
         <div className="absolute inset-0 bg-[#020202] -z-10" />
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,rgba(220,38,38,0.05)_0%,transparent_100%)] -z-10" />
@@ -1907,9 +2000,12 @@ const GrowthLabGameComp = memo(({ navigateTo, playSound, profileImageUrl, openCh
                             return (
                             <div 
                                 key={t.id} 
-                                ref={el => { if(el) targetElementsRef.current[t.id] = el; }}
-                                onClick={(e) => { e.stopPropagation(); handleTargetClick(t.type, t.id); }} 
-                                className={`absolute transform -translate-x-1/2 -translate-y-1/2 p-4 md:p-6 rounded-full cursor-pointer z-10 flex items-center justify-center will-change-pos w-16 h-16 md:w-24 md:h-24`}
+                                ref={el => { 
+                                    if(el) targetElementsRef.current[t.id] = el;
+                                    else delete targetElementsRef.current[t.id]; // Correct cleanup
+                                }}
+                                onClick={(e) => { e.stopPropagation(); handleTargetClick(e, t.type, t.id); }} 
+                                className={`absolute transform -translate-x-1/2 -translate-y-1/2 p-4 md:p-6 rounded-full cursor-pointer z-10 flex items-center justify-center will-change-pos w-16 h-16 md:w-24 md:h-24 will-change-transform`}
                                 style={{ left: `${t.initialX}%`, top: `${t.initialY}%`, transform: 'translate3d(0,0,0)' }} 
                             >
                                 <AssetComponent />
@@ -1980,7 +2076,7 @@ const GameWrapper = memo(({ active, ...props }) => {
 
 const MainContent = memo(({ view, profileImageUrl, t, experiences, stackData, testimonials, navigateTo, openChat, playSound, handleDownload, triggerSpell, openModal, copyDiscord, copyFeedback, sayHello }) => {
     return (
-        <main className="animate-reveal">
+        <main className="animate-reveal app-content">
         {view === 'home' && (
           <>
             <HeroSection 
@@ -1993,7 +2089,7 @@ const MainContent = memo(({ view, profileImageUrl, t, experiences, stackData, te
             />
             <TrustStrip lang={'fr'} t={t.trust} />
             
-            <section className="py-12 md:py-24 px-6 text-left relative cv-auto">
+            <section className="py-12 md:py-24 px-6 text-left relative cv-section">
               <div className="max-w-7xl mx-auto space-y-16 md:space-y-32">
                 <div className="flex flex-col md:flex-row justify-between items-end gap-6 md:gap-10">
                   <div className="space-y-3 md:space-y-4">
@@ -2018,7 +2114,7 @@ const MainContent = memo(({ view, profileImageUrl, t, experiences, stackData, te
 
             <Experiences experiences={experiences} onSpell={triggerSpell} t={t.exp} />
 
-            <section className="py-24 md:py-48 px-6 bg-[#020202] font-black relative cv-auto">
+            <section className="py-24 md:py-48 px-6 bg-[#020202] font-black relative cv-section">
                <div className="max-w-6xl mx-auto text-center">
                   <div className="mb-20 md:mb-32 space-y-4 md:space-y-6"><p className="text-red-500 uppercase text-[10px] md:text-[11px] tracking-[1em]">{t.cursus.sub}</p><h3 className="text-5xl md:text-7xl lg:text-[90px] font-black text-white uppercase tracking-tighter italic opacity-95 leading-none">{t.cursus.title}</h3></div>
                   <CursusSectionComp t={t.cursus} />
@@ -2065,8 +2161,30 @@ const App = () => {
   const [isMuted, setIsMuted] = useState(false);
   
   const [foundSecrets, setFoundSecrets] = useState([]);
+  const timerRef = useRef([]);
 
   useGlobalStyles(); // Injection unique des styles
+
+  // PERFORMANCE: Toggle class 'form-open' on body
+  // Optimisation: utilise une classe moins invasive pour le CSS
+  useEffect(() => {
+    if (isChatOpen || !!modalType) {
+      document.body.classList.add('form-open');
+    } else {
+      document.body.classList.remove('form-open');
+    }
+    
+    return () => {
+        document.body.classList.remove('form-open');
+    }
+  }, [isChatOpen, modalType]);
+
+  // Cleanup timers on unmount
+  useEffect(() => {
+      return () => {
+          timerRef.current.forEach(clearTimeout);
+      };
+  }, []);
 
   useEffect(() => {
     let keys = [];
@@ -2096,6 +2214,7 @@ const App = () => {
     try {
       const ctx = audioSystem.get();
       if (!ctx) return;
+      if (ctx.state === 'suspended') ctx.resume().catch(() => {});
       const osc = ctx.createOscillator();
       const gain = ctx.createGain();
       osc.type = type;
@@ -2171,7 +2290,8 @@ const App = () => {
 
   const showToast = useCallback((msg) => {
       setToast(msg);
-      setTimeout(() => setToast(null), 3000);
+      const id = setTimeout(() => setToast(null), 3000);
+      timerRef.current.push(id);
   }, []);
 
   const copyToClipboard = useCallback(async (text) => {
@@ -2201,7 +2321,8 @@ const App = () => {
       setCopyFeedback(true);
       showToast(t.toast.discord_copied);
       playSound(600);
-      setTimeout(() => setCopyFeedback(false), 2000);
+      const id = setTimeout(() => setCopyFeedback(false), 2000);
+      timerRef.current.push(id);
     }
   }, [playSound, t, showToast, copyToClipboard]);
 
@@ -2234,8 +2355,8 @@ const App = () => {
   const handleDownload = useCallback(() => {
     playSound(400);
     const link = document.createElement('a');
-    link.href = 'CV Lucien - 2026.pdf'; 
-    link.download = 'CV Lucien - 2026.pdf';
+    link.href = '/CV-Lucien-2026.pdf'; 
+    link.download = 'CV-Lucien-2026.pdf';
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
