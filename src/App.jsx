@@ -902,24 +902,27 @@ const CollaborationForm = memo(({ onClose, playSound, t, stackData, questComplet
     e.preventDefault();
     playSound(600, 'triangle', 0.3);
 
-    const formURL = "https://docs.google.com/forms/d/e/1FAIpQLSfba5x6oRziTkhXBInHvRycNp7uf-ZLX9U0LhXgBC-zg3m5dQ/formResponse";
-    const data = new FormData();
-
-    // Mapping exact des champs du formulaire React vers les entry IDs Google Form
-    data.append("entry.858352694", formData.type); // Contract Type
-    data.append("entry.275061660", formData.missions.join(', ')); // Domain/Missions
-    data.append("entry.1830973960", formData.isMinecraft ? "Oui" : "Non"); // Minecraft
-    data.append("entry.1640397975", formData.duration); // Duration
-    data.append("entry.611680350", formData.location); // Location
-    data.append("entry.1691884317", formData.project); // Project Description
-    data.append("entry.1325911167", formData.email); // Email
-    data.append("entry.1736174769", questCompleted ? "Oui (-5%)" : "Non"); // Discount
+    const scriptURL = "https://script.google.com/macros/s/AKfycbwhOLmm_yUrbGkdW-Px7vFxHul1yWYBAQYaehtsCJh7W29kVHJYa9tEgUN0mJzE-FwQ8w/exec";
+    
+    const payload = {
+        type: formData.type,
+        missions: formData.missions.join(', '),
+        isMinecraft: formData.isMinecraft ? "Oui" : "Non",
+        duration: formData.duration,
+        location: formData.location,
+        project: formData.project,
+        email: formData.email,
+        discount: questCompleted ? "Oui (-5%)" : "Non"
+    };
 
     try {
-      await fetch(formURL, {
+      await fetch(scriptURL, {
         method: "POST",
         mode: "no-cors",
-        body: data
+        headers: {
+            "Content-Type": "text/plain;charset=utf-8",
+        },
+        body: JSON.stringify(payload)
       });
     } catch (err) {
       console.error("Erreur d'envoi formulaire", err);
