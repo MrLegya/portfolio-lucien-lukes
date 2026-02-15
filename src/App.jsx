@@ -2358,8 +2358,8 @@ const App = () => {
   const handleDownload = useCallback(() => {
     playSound(400);
     const link = document.createElement('a');
-    link.href = '/CV-Lucien-2026.pdf'; 
-    link.download = 'CV-Lucien-2026.pdf';
+    link.href = '/Lucien_Lukes_CV.pdf'; 
+    link.download = 'Lucien_Lukes_CV.pdf';
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
