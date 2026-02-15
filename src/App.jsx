@@ -1,5 +1,4 @@
 import React, { useState, useEffect, useRef, useCallback, memo, useMemo, useReducer, useLayoutEffect } from 'react';
-import { createRoot } from 'react-dom/client';
 import { 
   Rocket, Users, Target, Mail, Gamepad2, Zap, ArrowRight,
   Search, Share2, MessageCircle, Cpu, Layers, 
@@ -15,14 +14,12 @@ import {
 } from 'lucide-react';
 
 // --- DEBUG PERFORMANCE ---
-// Activer via window.__DEBUG_PERF__ = true dans la console
 const usePerformanceLogger = (componentName) => {
   const renderCount = useRef(0);
   useEffect(() => {
     if (typeof window !== 'undefined' && window.__DEBUG_PERF__) {
       renderCount.current++;
-      console.time(`[Render] ${componentName}`);
-      return () => console.timeEnd(`[Render] ${componentName}`);
+      console.log(`[Render] ${componentName}: ${renderCount.current}`);
     }
   });
 };
@@ -43,32 +40,29 @@ const audioSystem = {
 };
 
 // --- HOOK OPTIMISATION: VISIBILITY CONTROL FOR ANIMATIONS ---
-// Bascule les animations en pause si l'élément n'est pas visible
 const useVisibilityControl = (ref, threshold = 0.1) => {
-  const [isVisible, setIsVisible] = useState(false); // Default false for performance
+  const [isVisible, setIsVisible] = useState(false);
+  const isVisibleRef = useRef(false);
 
   useEffect(() => {
     const el = ref.current;
     if (!el) return;
 
     const observer = new IntersectionObserver(([entry]) => {
-      // Utilisation d'un state transitionnel pour éviter le flickering
-      if (entry.isIntersecting) {
-        setIsVisible(true);
-      } else {
-        setIsVisible(false);
+      if (entry.isIntersecting !== isVisibleRef.current) {
+        isVisibleRef.current = entry.isIntersecting;
+        setIsVisible(entry.isIntersecting);
       }
     }, { threshold });
      
     observer.observe(el);
     return () => observer.disconnect();
-  }, [threshold]);
+  }, [ref, threshold]); // Fix: ref added to deps
    
   return isVisible;
 };
 
 // --- HOOK: STABLE INTERSECTION OBSERVER (TRUE ONCE) ---
-// Used specifically for "Entry" animations (fade-in, etc.)
 const useInViewOnce = (ref, { threshold = 0.1, rootMargin = '0px' } = {}) => {
   const [hasAppeared, setHasAppeared] = useState(false);
   const hasTriggered = useRef(false);
@@ -87,19 +81,16 @@ const useInViewOnce = (ref, { threshold = 0.1, rootMargin = '0px' } = {}) => {
      
     observer.observe(el);
     return () => observer.disconnect();
-  }, [threshold, rootMargin]);
+  }, [ref, threshold, rootMargin]);
    
   return hasAppeared;
 };
 
 // --- STYLES GLOBAUX OPTIMISÉS ---
-// Optimisations:
-// 1. Suppression des will-change globaux
-// 2. Introduction de content-visibility (cv-section)
-// 3. Classes .paused pour stopper les animations hors-viewport
-// 4. Refonte du sélecteur body.form-open pour éviter l'invalidation globale
 const GLOBAL_STYLES_STRING = `
-  :root { scroll-behavior: smooth; }
+  :root { 
+    /* scroll-behavior: smooth; REMOVED FOR PERF */ 
+  }
   body { font-family: 'Inter', sans-serif; background: #020202; overflow-x: hidden; touch-action: pan-y; margin: 0; padding: 0; }
     
   /* Performance Utilities */
@@ -108,14 +99,14 @@ const GLOBAL_STYLES_STRING = `
   /* Content Visibility: rendu paresseux pour les grosses sections */
   .cv-section {
     content-visibility: auto;
-    contain-intrinsic-size: 1px 800px; /* Estimation de la hauteur pour éviter le saut */
+    contain-intrinsic-size: 1px 800px;
   }
 
   /* Animation Control */
   .paused { animation-play-state: paused !important; }
   .paused * { animation-play-state: paused !important; }
 
-  /* Will Change Strategy: Only on active hover/interaction */
+  /* Will Change Strategy */
   .hover-gpu:hover { will-change: transform; }
   
   @media (prefers-reduced-motion: no-preference) {
@@ -165,18 +156,20 @@ const GLOBAL_STYLES_STRING = `
   }
 
   /* --- MODE PERFORMANCE (FORMULAIRE OUVERT) --- */
-  /* Ciblage spécifique au lieu de "body *" pour éviter le recalc global */
-  body.form-open .app-content {
+  /* Ciblage spécifique via une classe utilitaire */
+  body.form-open .paused-when-modal {
+    animation-play-state: paused !important;
     pointer-events: none;
-    filter: blur(2px); /* Optionnel: effet visuel léger */
-    transition: filter 0.3s ease;
+    /* REMPLACÉ : le blur sur une grande surface cause des lags */
+    opacity: 0.3; 
+    transition: opacity 0.3s ease;
   }
   
-  body.form-open .app-content * {
+  /* On s'assure que les enfants directs respectent aussi la pause */
+  body.form-open .paused-when-modal * {
     animation-play-state: paused !important;
   }
   
-  /* Interactions pour le formulaire et modales restent actives */
   .modal-container {
     pointer-events: auto !important;
   }
@@ -217,18 +210,15 @@ const GLOBAL_STYLES_STRING = `
   .animation-delay-2000 { animation-delay: 2s; }
 `;
 
-// Hook pour injecter les styles (Idempotent)
+// Hook pour injecter les styles (Idempotent + SSR Safe)
 const useGlobalStyles = () => {
   useLayoutEffect(() => {
+    if (typeof document === 'undefined') return;
     if (document.getElementById('global-styles')) return;
     const style = document.createElement('style');
     style.id = 'global-styles';
     style.innerHTML = GLOBAL_STYLES_STRING;
     document.head.appendChild(style);
-    return () => {
-      // Ne pas supprimer en dev/hot reload pour éviter le FOUC
-      // document.head.removeChild(style);
-    };
   }, []);
 };
 
@@ -806,7 +796,7 @@ const TechStackTicker = memo(({t}) => {
     const stack = useMemo(() => ["Meta Ads", "Google Ads", "GA4", "SEO Technical", "TikTok Ads", "HubSpot", "Zapier", "Copywriting", "Viral Loops", "Looker Studio", "Notion", "LinkedIn Growth"], []);
     
     return (
-        <div ref={containerRef} className={`w-full overflow-hidden border-y border-white/5 bg-[#020202] py-4 relative ${!isVisible ? 'paused' : ''}`} style={{ contain: 'content' }}>
+        <div ref={containerRef} className={`w-full overflow-hidden border-y border-white/5 bg-[#020202] py-4 relative ${!isVisible ? 'paused' : ''} paused-when-modal`} style={{ contain: 'content' }}>
             <div className="absolute left-0 top-0 bottom-0 w-12 bg-gradient-to-r from-[#0a0a0a] to-transparent z-10 pointer-events-none" />
             <div className="absolute right-0 top-0 bottom-0 w-12 bg-gradient-to-l from-[#0a0a0a] to-transparent z-10 pointer-events-none" />
             
@@ -823,7 +813,7 @@ const TechStackTicker = memo(({t}) => {
 });
 
 const TrustStrip = memo(({ lang, t }) => (
-  <>
+  <div className="paused-when-modal">
     <div className="py-6 md:py-10 border-y border-white/5 bg-[#0a0a0a] overflow-hidden relative z-30">
         <div className="max-w-7xl mx-auto px-6 flex flex-wrap justify-center lg:justify-between gap-4 md:gap-8 items-center text-slate-500 font-bold uppercase text-[9px] md:text-[10px] tracking-[0.2em]">
         <div className="flex items-center gap-2 md:gap-3"><ShieldCheck size={16} className="text-emerald-500" /> {t.sat}</div>
@@ -835,7 +825,7 @@ const TrustStrip = memo(({ lang, t }) => (
     <div className="flex justify-center py-8 animate-bounce w-full relative z-20">
         <ChevronDown className="text-white/40 w-8 h-8 md:w-10 md:h-10" />
     </div>
-  </>
+  </div>
 ));
 
 const TestimonialsSection = memo(({ testimonials, t }) => {
@@ -844,7 +834,7 @@ const TestimonialsSection = memo(({ testimonials, t }) => {
   usePerformanceLogger("TestimonialsSection");
 
   return (
-    <section ref={containerRef} className={`cv-section py-16 md:py-40 px-6 relative font-black border-t border-white/5 transition-opacity duration-1000 ${isVisible ? 'opacity-100' : 'opacity-0 paused'}`}>
+    <section ref={containerRef} className={`cv-section py-16 md:py-40 px-6 relative font-black border-t border-white/5 transition-opacity duration-1000 ${isVisible ? 'opacity-100' : 'opacity-0 paused'} paused-when-modal`}>
       <div className="max-w-7xl mx-auto space-y-12 md:space-y-24">
         <div className="text-center space-y-4">
           <p className="text-red-500 font-black uppercase text-[10px] md:text-[11px] tracking-[0.8em]">{t.sub}</p>
@@ -1086,7 +1076,7 @@ const HeroSection = memo(({ openChat, playSound, profileImageUrl, t, handleDownl
     };
 
     return (
-      <section id="hero" className="relative pt-40 md:pt-72 pb-24 md:pb-48 px-6 font-black cv-section">
+      <section id="hero" className="relative pt-40 md:pt-72 pb-24 md:pb-48 px-6 font-black cv-section paused-when-modal">
         <div className="absolute top-0 left-0 w-full h-full bg-gradient-to-b from-red-900/10 via-transparent to-[#020202] -z-10" />
         <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full h-[800px] md:h-[1200px] bg-[radial-gradient(circle_at_50%_0%,rgba(220,38,38,0.15)_0%,transparent_70%)] -z-10" />
         <div className="absolute bottom-0 left-0 w-full h-40 bg-gradient-to-t from-[#020202] to-transparent -z-10" />
@@ -1238,7 +1228,7 @@ const Experiences = memo(({ experiences, onSpell, t }) => {
   }, [isVisible]);
 
   return (
-    <section id="missions" ref={containerRef} className={`py-16 md:py-32 px-6 relative font-black cv-section ${hasAppeared ? 'opacity-100' : 'opacity-0'} transition-opacity duration-1000 ${!isVisible ? 'paused' : ''}`}>
+    <section id="missions" ref={containerRef} className={`py-16 md:py-32 px-6 relative font-black cv-section ${hasAppeared ? 'opacity-100' : 'opacity-0'} transition-opacity duration-1000 ${!isVisible ? 'paused' : ''} paused-when-modal`}>
       <div className="absolute top-0 left-0 w-full h-full bg-gradient-to-b from-transparent via-red-600/5 to-transparent -z-10" />
       <div className="max-w-6xl mx-auto space-y-12 md:space-y-32">
         <div className="text-center space-y-6">
@@ -1300,7 +1290,7 @@ const Experiences = memo(({ experiences, onSpell, t }) => {
 });
 
 const CursusSectionComp = memo(({ t }) => (
-  <div className="grid grid-cols-1 md:grid-cols-2 gap-8 md:gap-12 text-left font-black">
+  <div className="grid grid-cols-1 md:grid-cols-2 gap-8 md:gap-12 text-left font-black paused-when-modal">
     <div className="group relative p-8 md:p-12 bg-slate-900/40 border border-emerald-500/20 rounded-[3rem] md:rounded-[4rem] transition-all hover:bg-slate-900 shadow-2xl overflow-hidden font-black">
       <GraduationCap size={40} className="text-emerald-500 mb-6 md:mb-8 relative z-10" />
       <h4 className="text-white font-black text-2xl md:text-3xl uppercase tracking-tighter leading-none relative z-10">{t.dc.title}</h4>
@@ -1330,7 +1320,7 @@ const SectionBio = memo(({ profileImageUrl, navigateTo, copyDiscord, copyFeedbac
   usePerformanceLogger("SectionBio");
 
   return (
-  <div ref={containerRef} className={`pt-24 md:pt-40 pb-16 md:pb-24 px-6 animate-reveal font-black ${!isVisible ? 'paused' : ''}`}>
+  <div ref={containerRef} className={`pt-24 md:pt-40 pb-16 md:pb-24 px-6 animate-reveal font-black ${!isVisible ? 'paused' : ''} paused-when-modal`}>
     <div className="max-w-7xl mx-auto">
       <div className="mb-12 md:mb-20 space-y-6">
         <p className="text-red-500 font-black uppercase text-[11px] tracking-[1em] animate-fade-in-up">{t.sub}</p>
@@ -1475,7 +1465,9 @@ const initialGameState = {
   multiplier: 1,
   combo: 0,
   panicMode: false,
-  visualEvent: null
+  visualEvent: null,
+  visualEventUntil: 0, // NEW: timestamp end
+  multiplierExpiresAt: 0 // NEW: timestamp end
 };
 
 const gameReducer = (state, action) => {
@@ -1492,11 +1484,24 @@ const gameReducer = (state, action) => {
        return { ...state, targets: [...state.targets, action.payload] };
     case 'REMOVE_TARGET':
        return { ...state, targets: state.targets.filter(t => t.id !== action.payload) };
+    
+    // Updated Actions for No-Timeout Logic
     case 'SET_VISUAL_EVENT':
-        return { ...state, visualEvent: action.payload };
+        // payload can be null OR object { type, until }
+        if (!action.payload) return { ...state, visualEvent: null, visualEventUntil: 0 };
+        return { ...state, visualEvent: action.payload.type, visualEventUntil: action.payload.until };
+    
+    case 'EXTEND_MULTIPLIER':
+        // payload is new expiration timestamp
+        return { ...state, multiplier: state.multiplier + 1, multiplierExpiresAt: action.payload };
+
+    case 'RESET_MULTIPLIER':
+        // Reset triggered by loop when time is up
+        return { ...state, multiplier: Math.max(1, state.multiplier - 1), multiplierExpiresAt: 0 };
+
     case 'ADD_FEEDBACK':
         return { ...state, clickFeedbacks: [...state.clickFeedbacks, action.payload] };
-    case 'REMOVE_FEEDBACK':
+    case 'REMOVE_FEEDBACK_BY_ID':
         return { ...state, clickFeedbacks: state.clickFeedbacks.filter(f => f.id !== action.payload) };
     case 'RETRY':
         return { ...initialGameState, showBriefing: true, score: 0 };
@@ -1507,7 +1512,6 @@ const gameReducer = (state, action) => {
         let newScore = state.score;
         let newTime = state.timeLeft;
         let newCombo = state.combo;
-        let newMultiplier = state.multiplier;
         let msg = "";
         let color = "text-emerald-400";
 
@@ -1522,7 +1526,7 @@ const gameReducer = (state, action) => {
                 newScore += 15000 * state.multiplier;
                 msg = "VIRALITÈ MAX!";
                 color = "text-yellow-400";
-                newMultiplier += 1;
+                // Multiplier handled via EXTEND_MULTIPLIER action dispatched separately or here if merged
                 break;
             case 'spam': 
                 newScore -= 5000;
@@ -1553,17 +1557,10 @@ const gameReducer = (state, action) => {
             score: newScore,
             timeLeft: newTime,
             combo: newCombo,
-            multiplier: newMultiplier,
             targets: state.targets.filter(t => t.id !== id),
             clickFeedbacks: [...state.clickFeedbacks, { id: feedbackId, x, y, msg, color }]
         };
     }
-     
-    case 'RESET_MULTIPLIER':
-        return { ...state, multiplier: Math.max(1, state.multiplier - 1) };
-
-    case 'REMOVE_FEEDBACK_BY_ID':
-        return { ...state, clickFeedbacks: state.clickFeedbacks.filter(f => f.id !== action.payload) };
 
     default:
       return state;
@@ -1575,13 +1572,17 @@ const GrowthLabGameComp = memo(({ navigateTo, playSound, profileImageUrl, openCh
   const { gameActive, showBriefing, score, timeLeft, targets, clickFeedbacks, multiplier, combo, panicMode, visualEvent } = state;
     
   const lastFrameTime = useRef(0);
+  const accumulator = useRef(0);
   const gameAreaRef = useRef(null);
   const visualUpdateRef = useRef(null);
   const isVisibleRef = useRef(false);
-  const deadIdsRef = useRef(new Set()); // To track removed targets
+  
+  // State Ref for Loop Access without re-creating loop
+  const stateRef = useRef(state);
+  useEffect(() => { stateRef.current = state; }, [state]);
 
   const targetsPhysics = useRef([]);
-  const targetElementsRef = useRef({});
+  const targetElementsRef = useRef({}); 
 
   const idCounter = useRef(0);
   const generateId = () => {
@@ -1594,7 +1595,7 @@ const GrowthLabGameComp = memo(({ navigateTo, playSound, profileImageUrl, openCh
     comboRef.current = combo;
   }, [combo]);
 
-  // Observation de visibilité pour mettre en pause la loop physique
+  // Visibility observer
   useEffect(() => {
       const observer = new IntersectionObserver(([entry]) => {
           isVisibleRef.current = entry.isIntersecting;
@@ -1606,105 +1607,111 @@ const GrowthLabGameComp = memo(({ navigateTo, playSound, profileImageUrl, openCh
       return () => observer.disconnect();
   }, []);
 
-  // Memoize score scaling style
   const scoreStyle = useMemo(() => ({
     transform: `scale(${1 + Math.min(combo * 0.1, 0.5)})`
   }), [combo]);
 
   // Remove feedbacks automatically
   useEffect(() => {
-    // Only schedule if feedbacks exist to avoid effect churn
     if (clickFeedbacks.length > 0) {
         const idToRemove = clickFeedbacks[0].id;
         const timer = setTimeout(() => {
-             // This dispatches an action to remove the *specific* feedback ID
-             // The reducer handles the filtering
             dispatch({ type: 'REMOVE_FEEDBACK_BY_ID', payload: idToRemove });
         }, 800);
         return () => clearTimeout(timer);
     }
   }, [clickFeedbacks]);
 
-  // GAME LOOP OPTIMISÉE (Adaptive FPS)
+  // GAME LOOP
   useEffect(() => {
     let animationFrame;
-    let frameCount = 0;
+    const FIXED_STEP = 1000 / 60; 
 
     if (gameActive) {
       lastFrameTime.current = performance.now();
+      accumulator.current = 0;
       
-      const updatePhysics = (time) => {
-        // Pause si non visible ou onglet inactif
+      const loop = (time) => {
         if (!isVisibleRef.current || document.hidden) {
-            animationFrame = requestAnimationFrame(updatePhysics);
+            animationFrame = requestAnimationFrame(loop);
             lastFrameTime.current = time;
             return;
         }
 
-        const delta = time - lastFrameTime.current;
-        
-        // Limite à ~30 FPS si la charge est trop forte (>33ms par frame)
-        // Sinon cible 60 FPS (~16ms)
-        const targetInterval = delta > 33 ? 33 : 16;
+        let deltaTime = time - lastFrameTime.current;
+        lastFrameTime.current = time;
+        if (deltaTime > 100) deltaTime = 100;
 
-        if (delta < targetInterval) {
-            animationFrame = requestAnimationFrame(updatePhysics);
-            return;
+        accumulator.current += deltaTime;
+
+        while (accumulator.current >= FIXED_STEP) {
+            const { width, height } = visualUpdateRef.current || { width: 100, height: 100 };
+            const now = Date.now();
+            const dt = 1; 
+
+            // Physics Update
+            targetsPhysics.current.forEach(t => {
+                t.x += t.vx * dt;
+                t.y += t.vy * dt;
+                if (t.x <= 0) { t.x = 0; t.vx = Math.abs(t.vx); }
+                else if (t.x >= 100) { t.x = 100; t.vx = -Math.abs(t.vx); }
+                if (t.y <= 0) { t.y = 0; t.vy = Math.abs(t.vy); }
+                else if (t.y >= 100) { t.y = 100; t.vy = -Math.abs(t.vy); }
+
+                // Target Expiration
+                if (!t.processed && now > t.expiresAt) {
+                    t.processed = true;
+                    dispatch({ type: 'REMOVE_TARGET', payload: t.id });
+                }
+            });
+
+            targetsPhysics.current = targetsPhysics.current.filter(t => !t.processed);
+
+            // State Logic Expiration Checks (Visuals & Multiplier)
+            const currentState = stateRef.current;
+            
+            // Check Visual Event Expiration
+            if (currentState.visualEvent && now > currentState.visualEventUntil) {
+                 dispatch({ type: 'SET_VISUAL_EVENT', payload: null });
+            }
+
+            // Check Multiplier Expiration
+            if (currentState.multiplier > 1 && currentState.multiplierExpiresAt > 0 && now > currentState.multiplierExpiresAt) {
+                 dispatch({ type: 'RESET_MULTIPLIER' });
+            }
+
+            accumulator.current -= FIXED_STEP;
         }
 
-        lastFrameTime.current = time - (delta % targetInterval);
-        frameCount++;
-
-        // Mise à jour layout une seule fois au début ou resize (géré par resize listener)
-        if (!visualUpdateRef.current && gameAreaRef.current) {
-            visualUpdateRef.current = {
-                width: gameAreaRef.current.offsetWidth,
-                height: gameAreaRef.current.offsetHeight
-            };
-        }
-        
-        // Sécurité si ref pas prête
-        if (!visualUpdateRef.current) {
-             animationFrame = requestAnimationFrame(updatePhysics);
-             return;
-        }
-
-        const { width, height } = visualUpdateRef.current;
-        let dt = delta / 16.66;
-        if (dt > 4) dt = 1; // Cap dt pour éviter les sauts
-
-        // Update physique
+        const { width, height } = visualUpdateRef.current || { width: 1, height: 1 };
         targetsPhysics.current.forEach(t => {
-          t.x += t.vx * dt;
-          t.y += t.vy * dt;
-          
-          if (t.x <= 0) { t.x = 0; t.vx = Math.abs(t.vx); }
-          else if (t.x >= 100) { t.x = 100; t.vx = -Math.abs(t.vx); }
-          
-          if (t.y <= 0) { t.y = 0; t.vy = Math.abs(t.vy); }
-          else if (t.y >= 100) { t.y = 100; t.vy = -Math.abs(t.vy); }
-
-          // Mise à jour DOM directe (évite React render)
-          const el = targetElementsRef.current[t.id];
-          if (el) {
-            const deltaX = (t.x - t.initialX) / 100 * width;
-            const deltaY = (t.y - t.initialY) / 100 * height;
-            el.style.transform = `translate3d(${deltaX}px, ${deltaY}px, 0)`;
-          }
+             const el = targetElementsRef.current[t.id];
+             if (el) {
+                const deltaX = (t.x - t.initialX) / 100 * width;
+                const deltaY = (t.y - t.initialY) / 100 * height;
+                el.style.transform = `translate3d(${deltaX}px, ${deltaY}px, 0)`;
+             }
         });
         
-        animationFrame = requestAnimationFrame(updatePhysics);
+        animationFrame = requestAnimationFrame(loop);
       };
-      animationFrame = requestAnimationFrame(updatePhysics);
+      
+      if (gameAreaRef.current) {
+         visualUpdateRef.current = {
+            width: gameAreaRef.current.offsetWidth,
+            height: gameAreaRef.current.offsetHeight
+         };
+      }
+
+      animationFrame = requestAnimationFrame(loop);
     }
+    
     return () => {
         cancelAnimationFrame(animationFrame);
-        // Reset layout cache on stop
-        visualUpdateRef.current = null;
     };
-  }, [gameActive]);
+  }, [gameActive]); // Only restarts on game active toggle
 
-  // Resize handler optimisé (debounce strict)
+  // Resize handler
   useEffect(() => {
     let resizeTimeout;
     const handleResize = () => {
@@ -1720,17 +1727,18 @@ const GrowthLabGameComp = memo(({ navigateTo, playSound, profileImageUrl, openCh
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
-  // Spawn logic
+  // SPAWN LOGIC
   useEffect(() => {
     let spawnInterval;
     if (gameActive) {
       spawnInterval = setInterval(() => {
         if (targetsPhysics.current.length >= 8) return;
-        if (!isVisibleRef.current || document.hidden) return; // Pas de spawn si caché
+        if (!isVisibleRef.current || document.hidden) return;
 
         const id = generateId();
         const rand = Math.random();
         let type = 'lead';
+        
         if (rand < 0.08) type = 'golden_rocket';
         else if (rand < 0.30) type = 'spam'; 
         else if (rand < 0.35) type = 'vip';
@@ -1749,24 +1757,17 @@ const GrowthLabGameComp = memo(({ navigateTo, playSound, profileImageUrl, openCh
         if (Math.abs(vx) < 0.2) vx = 0.5;
         if (Math.abs(vy) < 0.2) vy = 0.5;
 
+        const lifetime = 1500;
+        const expiresAt = Date.now() + lifetime;
+
         const newTarget = { 
             id, x: startX, y: startY, initialX: startX, initialY: startY,
-            type, vx: vx * speedFactor, vy: vy * speedFactor 
+            type, vx: vx * speedFactor, vy: vy * speedFactor,
+            expiresAt, processed: false 
         };
 
         targetsPhysics.current.push(newTarget);
         dispatch({ type: 'ADD_TARGET', payload: { id, type, initialX: startX, initialY: startY } });
-
-        setTimeout(() => {
-            // Check if target still exists in physics (it might have been clicked)
-            // Use deadIdsRef to be safer
-             if (!deadIdsRef.current.has(id)) {
-                deadIdsRef.current.add(id);
-                dispatch({ type: 'REMOVE_TARGET', payload: id });
-                targetsPhysics.current = targetsPhysics.current.filter(t => t.id !== id);
-                delete targetElementsRef.current[id];
-            }
-        }, 1500);
 
       }, panicMode ? 150 : 280); 
     }
@@ -1800,7 +1801,7 @@ const GrowthLabGameComp = memo(({ navigateTo, playSound, profileImageUrl, openCh
       }
   }, [timeLeft, gameActive, panicMode, playSound, score, onSpell]);
 
-  // Events logic
+  // Events logic (Replaced setTimeout with visualEventUntil)
   useEffect(() => {
     let eventInterval;
     if (gameActive) {
@@ -1808,13 +1809,13 @@ const GrowthLabGameComp = memo(({ navigateTo, playSound, profileImageUrl, openCh
             if (!isVisibleRef.current) return;
             const rand = Math.random();
             if (rand < 0.15) {
-                dispatch({ type: 'SET_VISUAL_EVENT', payload: 'crash' });
+                // Trigger Crash
+                dispatch({ type: 'SET_VISUAL_EVENT', payload: { type: 'crash', until: Date.now() + 500 } });
                 playSound(100, 'sawtooth', 0.5);
-                setTimeout(() => dispatch({ type: 'SET_VISUAL_EVENT', payload: null }), 500);
             } else if (rand > 0.85) {
-                dispatch({ type: 'SET_VISUAL_EVENT', payload: 'hype' });
+                // Trigger Hype
+                dispatch({ type: 'SET_VISUAL_EVENT', payload: { type: 'hype', until: Date.now() + 500 } });
                 playSound(1200, 'square', 0.5);
-                setTimeout(() => dispatch({ type: 'SET_VISUAL_EVENT', payload: null }), 500);
             }
         }, 4000);
     }
@@ -1824,39 +1825,23 @@ const GrowthLabGameComp = memo(({ navigateTo, playSound, profileImageUrl, openCh
   const startGame = useCallback(() => {
     dispatch({ type: 'START_GAME' });
     targetsPhysics.current = [];
-    deadIdsRef.current = new Set(); // Reset dead ids
     playSound(440, 'sine', 0.3);
   }, [playSound]);
 
   const handleTargetClick = useCallback((e, type, id) => { 
-    // Prevent double clicking
-    if (deadIdsRef.current.has(id)) return;
-    deadIdsRef.current.add(id);
+    const targetIndex = targetsPhysics.current.findIndex(t => t.id === id);
+    if (targetIndex === -1) return;
 
-    const targetPhys = targetsPhysics.current.find(t => t.id === id);
-    let currentX, currentY;
-     
-    if (targetPhys) {
-        currentX = targetPhys.x;
-        currentY = targetPhys.y;
-    } else if (gameAreaRef.current) {
-        // Fallback if targetPhys missing but clicked (race condition)
-        const rect = gameAreaRef.current.getBoundingClientRect();
-        currentX = ((e.clientX - rect.left) / rect.width) * 100;
-        currentY = ((e.clientY - rect.top) / rect.height) * 100;
-        // Clamp to 0-100 just in case
-        currentX = Math.max(0, Math.min(100, currentX));
-        currentY = Math.max(0, Math.min(100, currentY));
-    } else {
-        currentX = 50;
-        currentY = 50;
-    }
-     
+    const targetPhys = targetsPhysics.current[targetIndex];
+    if (targetPhys.processed) return;
+
+    targetPhys.processed = true;
+
+    let currentX = targetPhys.x;
+    let currentY = targetPhys.y;
+    
     const feedbackId = generateId();
-
     dispatch({ type: 'TARGET_HIT', payload: { targetType: type, id, x: currentX, y: currentY, feedbackId } });
-     
-    // Using useEffect to remove feedback, so no need for setTimeout here anymore as requested
 
     const currentCombo = comboRef.current;
 
@@ -1864,7 +1849,8 @@ const GrowthLabGameComp = memo(({ navigateTo, playSound, profileImageUrl, openCh
       case 'lead': playSound(880 + (currentCombo * 20)); break;
       case 'golden_rocket': 
         playSound(1300, 'square'); 
-        setTimeout(() => dispatch({ type: 'RESET_MULTIPLIER' }), 5000); 
+        // Trigger multiplier extension (no setTimeout)
+        dispatch({ type: 'EXTEND_MULTIPLIER', payload: Date.now() + 5000 });
         break;
       case 'spam': playSound(100, 'sawtooth'); break;
       case 'vip': playSound(1800, 'triangle'); break;
@@ -1872,9 +1858,9 @@ const GrowthLabGameComp = memo(({ navigateTo, playSound, profileImageUrl, openCh
       case 'clock': playSound(1200); break;
     }
 
-    targetsPhysics.current = targetsPhysics.current.filter(t => t.id !== id);
+    targetsPhysics.current.splice(targetIndex, 1);
     delete targetElementsRef.current[id];
-  }, [playSound]); // Removed combo dependency
+  }, [playSound]);
 
   return (
     <div className="pt-24 md:pt-40 pb-24 md:pb-40 px-6 font-black animate-reveal min-h-screen relative flex flex-col items-center justify-start overflow-hidden">
@@ -2076,7 +2062,7 @@ const GameWrapper = memo(({ active, ...props }) => {
 
 const MainContent = memo(({ view, profileImageUrl, t, experiences, stackData, testimonials, navigateTo, openChat, playSound, handleDownload, triggerSpell, openModal, copyDiscord, copyFeedback, sayHello }) => {
     return (
-        <main className="animate-reveal app-content">
+        <main className="animate-reveal app-content paused-when-modal">
         {view === 'home' && (
           <>
             <HeroSection 
@@ -2089,7 +2075,7 @@ const MainContent = memo(({ view, profileImageUrl, t, experiences, stackData, te
             />
             <TrustStrip lang={'fr'} t={t.trust} />
             
-            <section className="py-12 md:py-24 px-6 text-left relative cv-section">
+            <section className="py-12 md:py-24 px-6 text-left relative cv-section paused-when-modal">
               <div className="max-w-7xl mx-auto space-y-16 md:space-y-32">
                 <div className="flex flex-col md:flex-row justify-between items-end gap-6 md:gap-10">
                   <div className="space-y-3 md:space-y-4">
@@ -2114,7 +2100,7 @@ const MainContent = memo(({ view, profileImageUrl, t, experiences, stackData, te
 
             <Experiences experiences={experiences} onSpell={triggerSpell} t={t.exp} />
 
-            <section className="py-24 md:py-48 px-6 bg-[#020202] font-black relative cv-section">
+            <section className="py-24 md:py-48 px-6 bg-[#020202] font-black relative cv-section paused-when-modal">
                <div className="max-w-6xl mx-auto text-center">
                   <div className="mb-20 md:mb-32 space-y-4 md:space-y-6"><p className="text-red-500 uppercase text-[10px] md:text-[11px] tracking-[1em]">{t.cursus.sub}</p><h3 className="text-5xl md:text-7xl lg:text-[90px] font-black text-white uppercase tracking-tighter italic opacity-95 leading-none">{t.cursus.title}</h3></div>
                   <CursusSectionComp t={t.cursus} />
