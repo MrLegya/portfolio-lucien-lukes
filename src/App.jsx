@@ -10,7 +10,7 @@ import {
   MapPin, ChevronDown, Brain, Workflow,
   Linkedin, Github, Briefcase as Job, Megaphone, Compass, Menu, Hash, Clock,
   Volume2, VolumeX, Copy, Bell, Gift, PieChart, Sliders,
-  HelpCircle, Check, Unlock, MousePointer2, Keyboard, Fingerprint, FileText, Crosshair, ListTodo, Info, XCircle
+  HelpCircle, Check, Unlock, MousePointer2, Keyboard, Fingerprint, FileText, Crosshair, ListTodo, Info, XCircle, Loader2
 } from 'lucide-react';
 
 // --- DEBUG PERFORMANCE ---
@@ -303,8 +303,8 @@ const TEXTS = {
     },
     trust: { sat: "100% Satisfaction", proj: "+50 Projets", int: "International", conf: "Confidentialité" },
     stack: {
-      title_sub: "Methodology",
-      title: "Playbook.",
+      title_sub: "Méthodologie",
+      title: "Stratégies.",
       desc: "Consultant marketing à Montpellier - Stratégies d'acquisition 360°.",
       top: "Top Demande",
       new: "NEW"
@@ -316,8 +316,8 @@ const TEXTS = {
       details_prefix: "Détails"
     },
     cursus: {
-      sub: "Academic Foundation",
-      title: "Foundations.",
+      sub: "Parcours Académique",
+      title: "Fondations.",
       dc: { title: "Digital Campus", sub: "Master Expert Stratégie Digitale" },
       iscom: { title: "ISCOM", sub: "Bachelor Communication & Pub" }
     },
@@ -329,7 +329,7 @@ const TEXTS = {
       dl: "Télécharger CV",
       intro_1: "Moi c'est",
       intro_2: "Lucien.",
-      job: "Growth Architect & Consultant Influence",
+      job: "Architecte de Croissance & Consultant Influence",
       p1_bold: "Je ne fais pas “juste” du digital.",
       p1: "J’aide des projets à se structurer, trouver leur public et prendre de l’ampleur.",
       p2_bold: "gaming, tech, plateformes sociales",
@@ -351,7 +351,7 @@ const TEXTS = {
     game: {
       title: "Influence",
       title_sub: "Rush.",
-      timer: "Timer",
+      timer: "Chrono",
       eng: "ENGAGEMENT",
       brief: "Mission Briefing",
       brief_client: "Clients",
@@ -361,8 +361,8 @@ const TEXTS = {
       brief_bad: "Bad Buzz",
       brief_streak: "Streak",
       btn_start: "Commencer",
-      score_title: "Scoreboard.",
-      record: "Engagement Record",
+      score_title: "Tableau des Scores.",
+      record: "Record d'Engagement",
       you: "Toi (Visiteur)",
       score: "Score actuel",
       taunt: "Tu vois, je suis meilleur... Alors contacte-moi ! 😉",
@@ -440,7 +440,7 @@ const getTestimonials = (lang) => [
 ];
 
 const getExperiences = (lang) => [
-  { company: 'RIVRS', link: 'https://www.rivrs.io/', role: 'Directeur Marketing & Influence', period: '2023 - Présent', desc: 'Pilotage global des campagnes d\'influence sur Minecraft (FR & International).', impact: '5M VISITEURS MENSUELS', details: ["Gestion et structuration des campagnes d'influence sur l'ensemble des serveurs Rivrs.", "Pilotage de stratégies massives sur les marchés France, US, DE et IT.", "Management de l'équipe marketing (8 personnes) et créative.", "Optimisation du CAC et de la LTV via des dashboards Data avancés."] },
+  { company: 'RIVRS', link: 'https://www.rivrs.io/', role: 'Directeur Marketing & Influence', period: '2023 - Présent', desc: 'Pilotage global des campagnes d\'influence sur Minecraft (FR & International).', impact: '80 000 JOUEURS MENSUELS', details: ["Gestion et structuration des campagnes d'influence sur l'ensemble des serveurs Rivrs.", "Pilotage de stratégies massives sur les marchés France, US, DE et IT.", "Management de l'équipe marketing (8 personnes) et créative.", "Optimisation du CAC et de la LTV via des dashboards Data avancés."] },
   { company: 'OUTLIER', link: 'https://outlier.ai/', role: 'AI Marketing Architect', period: '2023 - 2024', desc: 'Entraînement de modèles IA via le marketing de contenu stratégique.', impact: '100+ CAMPAGNES IA', details: ["Collaboration étroite avec des ingénieurs IA pour affiner la pertinence et performance des modèles.", "Optimisation de modèles LLM pour la conversion marketing et psychologie client.", "Rédaction de scripts de vente haute-performance assistés par IA."] },
   { 
     company: 'POUDLARD RP', 
@@ -458,15 +458,15 @@ const getExperiences = (lang) => [
       'Développement d\'une économie virtuelle complexe et stable.'
     ]
   },
-  { company: 'UNREAL ENGINE', link: 'https://www.unrealengine.com/fr', role: 'Chargé de communauté & Événementiel (Stage)', period: '2020 - 2022', desc: 'Community Manager pour l\'écosystème Unreal Engine, focalisé sur l\'engagement Discord.', impact: 'GESTION DISCORD INTÉGRALE', details: ["Gestion intégrale et animation du serveur Discord communautaire.", "Organisation d'événements en ligne et coordination des modérateurs.", "Mise en place de bots et de structures de salons pour optimiser l'UX communautaire.", "Relais d'information technique et support de premier niveau pour les créateurs."] }
+  { company: 'Epic Games (Unreal Engine)', link: 'https://www.unrealengine.com/fr', role: 'Chargé de communauté & Événementiel (Stage)', period: '2020 - 2022', desc: 'Community Manager pour l\'écosystème Unreal Engine, focalisé sur l\'engagement Discord.', impact: 'GESTION DISCORD INTÉGRALE', details: ["Gestion intégrale et animation du serveur Discord communautaire.", "Organisation d'événements en ligne et coordination des modérateurs.", "Mise en place de bots et de structures de salons pour optimiser l'UX communautaire.", "Relais d'information technique et support de premier niveau pour les créateurs."] }
 ];
 
 const getStack = (lang) => [
   { name: "Influence Marketing", icon: Share2, category: "Social", simple: "Connecter votre marque aux bonnes personnes pour créer de la confiance.", definition: "Partenariats avec des créateurs de contenu.", popular: true, extraInfo: "Carnet d'adresses : 300+ Créateurs Internationaux (FR/US/DE/IT).", actions: ["Sourcing via Data Scraping", "Contrats Performance (CPA)", "Tunnels de Conversion Dédiés"] },
   { name: "SEO / SEM", icon: Search, category: "Acquisition", simple: "Être trouvé immédiatement par ceux qui veulent acheter votre produit.", definition: "Optimisation Google & Publicité ciblée.", actions: ["Topic Clusters & Content Silos", "Audit Core Web Vitals", "Google Ads ROI-Driven"] },
   { name: "Développeur React", icon: Trophy, category: "Tech", simple: "Développer des applications web ultra-performantes comme celle-ci.", definition: "Création de sites & apps modernes.", isNew: true, actions: ["React & Tailwind", "Animations Framer Motion", "Expérience Utilisateur (UX)"] },
-  { name: "ADS (Tiktok, FB, Google)", icon: Megaphone, category: "Paid Media", simple: "Campagnes publicitaires ultra-ciblées pour un ROI immédiat.", definition: "Acquisition payante multicanale.", actions: ["A/B Testing Massif", "Ciblage Comportemental", "Analytics Cohortes"] },
-  { name: "CRM Automation", icon: Layers, category: "Retention", simple: "Prendre soin de vos clients automatiquement pour qu'ils achètent plus souvent.", definition: "Gestion automatisée de la base client.", actions: ["Segmentation Comportementale", "Lead Nurturing", "Emailing Haute-Performance"] },
+  { name: "ADS (Tiktok, FB, Google)", icon: Megaphone, category: "Média Payant", simple: "Campagnes publicitaires ultra-ciblées pour un ROI immédiat.", definition: "Acquisition payante multicanale.", actions: ["A/B Testing Massif", "Ciblage Comportemental", "Analytics Cohortes"] },
+  { name: "CRM Automation", icon: Layers, category: "Rétention", simple: "Prendre soin de vos clients automatiquement pour qu'ils achètent plus souvent.", definition: "Gestion automatisée de la base client.", actions: ["Segmentation Comportementale", "Lead Nurturing", "Emailing Haute-Performance"] },
   { name: "Plan de Com' 360°", icon: Compass, category: "Stratégie", simple: "Une feuille de route claire pour dominer votre marché et engager votre audience.", definition: "Vision globale et calendrier éditorial.", actions: ["Brand Voice", "Content Pillars", "Planification Stratégique"] }
 ];
 
@@ -707,7 +707,7 @@ const Navbar = memo(({ view, navigateTo, openChat, t, isMuted, toggleMute }) => 
           </div>
           <div className="flex flex-col leading-tight font-black pt-1">
             <span className="text-white font-black text-xl md:text-2xl uppercase tracking-tighter group-hover:text-red-500 transition-colors duration-500 text-left">Lucien Lukes</span>
-            <span className="text-[9px] md:text-[10px] text-slate-500 font-black tracking-[0.4em] md:tracking-[0.6em] uppercase italic group-hover:text-white transition-colors duration-700">Growth Architect</span>
+            <span className="text-[9px] md:text-[10px] text-slate-500 font-black tracking-[0.4em] md:tracking-[0.6em] uppercase italic group-hover:text-white transition-colors duration-700">Architecte de Croissance</span>
           </div>
         </div>
 
@@ -761,10 +761,10 @@ const SkillRadar = memo(({t}) => {
                 <polygon points="100,40 160,100 100,160 40,100" fill="none" stroke="#222" strokeWidth="1" />
                 <polygon points="100,60 140,100 100,140 60,100" fill="none" stroke="#222" strokeWidth="1" />
                 
-                <text x="100" y="10" textAnchor="middle" fill="#dc2626" fontSize="10" fontWeight="900" letterSpacing="1">STRATEGY</text>
+                <text x="100" y="10" textAnchor="middle" fill="#dc2626" fontSize="10" fontWeight="900" letterSpacing="1">STRATEGIE</text>
                 <text x="200" y="103" textAnchor="middle" fill="#fff" fontSize="10" fontWeight="900" letterSpacing="1">TECH</text>
                 <text x="100" y="200" textAnchor="middle" fill="#fff" fontSize="10" fontWeight="900" letterSpacing="1">DATA</text>
-                <text x="0" y="103" textAnchor="middle" fill="#fff" fontSize="10" fontWeight="900" letterSpacing="1">CREATIVE</text>
+                <text x="0" y="103" textAnchor="middle" fill="#fff" fontSize="10" fontWeight="900" letterSpacing="1">CREATIF</text>
 
                 <polygon points="100,25 170,100 100,170 35,100" fill="rgba(220, 38, 38, 0.2)" stroke="#dc2626" strokeWidth="2" className="animate-pulse" />
                 
@@ -786,7 +786,7 @@ const SkillRadar = memo(({t}) => {
 const TechStackTicker = memo(({t}) => {
     const containerRef = useRef(null);
     const isVisible = useVisibilityControl(containerRef);
-    const stack = useMemo(() => ["Meta Ads", "Google Ads", "GA4", "SEO Technical", "TikTok Ads", "HubSpot", "Zapier", "Copywriting", "Viral Loops", "Looker Studio", "Notion", "LinkedIn Growth"], []);
+    const stack = useMemo(() => ["Meta Ads", "Google Ads", "GA4", "SEO Technique", "TikTok Ads", "HubSpot", "Zapier", "Copywriting", "Boucles Virales", "Looker Studio", "Notion", "Croissance LinkedIn"], []);
     
     return (
         <div ref={containerRef} className={`w-full overflow-hidden border-y border-white/5 bg-[#020202] py-4 relative ${!isVisible ? 'paused' : ''} paused-when-modal`} style={{ contain: 'content' }}>
@@ -879,6 +879,7 @@ const MemoizedMissionButton = memo(({ stack, isSelected, onClick }) => {
 
 const CollaborationForm = memo(({ onClose, playSound, t, stackData, questCompleted }) => {
   const [step, setStep] = useState(1);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [formData, setFormData] = useState({
     type: 'freelance',
     isMinecraft: false,
@@ -900,6 +901,7 @@ const CollaborationForm = memo(({ onClose, playSound, t, stackData, questComplet
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    setIsSubmitting(true);
     playSound(600, 'triangle', 0.3);
 
     const scriptURL = "https://script.google.com/macros/s/AKfycbwhOLmm_yUrbGkdW-Px7vFxHul1yWYBAQYaehtsCJh7W29kVHJYa9tEgUN0mJzE-FwQ8w/exec";
@@ -927,7 +929,8 @@ const CollaborationForm = memo(({ onClose, playSound, t, stackData, questComplet
     } catch (err) {
       console.error("Erreur d'envoi formulaire", err);
     }
-
+    
+    setIsSubmitting(false);
     setStep(3); // écran succès
   };
 
@@ -1041,9 +1044,27 @@ const CollaborationForm = memo(({ onClose, playSound, t, stackData, questComplet
                 <input required type="email" placeholder="contact@entreprise.com" className="optimized-input w-full bg-white/5 border border-white/10 rounded-2xl px-6 py-5 text-white text-sm focus:border-red-600 outline-none font-bold placeholder:text-slate-600 focus:bg-white/10" onChange={(e) => setFormData({...formData, email: e.target.value})} />
               </div>
 
-              <div className="pt-4 flex gap-4">
-                <button type="button" onClick={() => setStep(1)} className="px-8 py-6 rounded-2xl border border-white/10 text-white font-black uppercase hover:bg-white/5 transition-colors duration-200 text-xs tracking-widest">{t.btn_back}</button>
-                <button type="submit" className="flex-1 bg-red-600 text-white py-6 rounded-2xl font-black uppercase tracking-[0.2em] hover:bg-white hover:text-black transition-colors duration-200 shadow-glow-red active:scale-95 flex items-center justify-center gap-3">{t.btn_send} <Send size={18} /></button>
+              <div className="pt-4 flex flex-col gap-4">
+                {questCompleted && (
+                    <div className="bg-yellow-500/10 border border-yellow-500/30 p-3 rounded-xl flex items-center justify-center gap-2">
+                        <Trophy size={16} className="text-yellow-500" />
+                        <span className="text-yellow-500 font-bold text-xs uppercase tracking-wider">Remise de 5% appliquée !</span>
+                    </div>
+                )}
+                <div className="flex gap-4">
+                    <button type="button" onClick={() => setStep(1)} className="px-8 py-6 rounded-2xl border border-white/10 text-white font-black uppercase hover:bg-white/5 transition-colors duration-200 text-xs tracking-widest">{t.btn_back}</button>
+                    <button type="submit" disabled={isSubmitting} className="flex-1 bg-red-600 text-white py-6 rounded-2xl font-black uppercase tracking-[0.2em] hover:bg-white hover:text-black transition-colors duration-200 shadow-glow-red active:scale-95 flex items-center justify-center gap-3 disabled:opacity-50 disabled:cursor-not-allowed">
+                        {isSubmitting ? (
+                            <>
+                                <Loader2 size={18} className="animate-spin" /> Envoi...
+                            </>
+                        ) : (
+                            <>
+                                {t.btn_send} <Send size={18} />
+                            </>
+                        )}
+                    </button>
+                </div>
               </div>
             </form>
           )}
