@@ -434,45 +434,40 @@ const TEXTS = {
 };
 
 const getTestimonials = (lang) => [
-  { id: 1, name: "Thomas", role: lang === 'fr' ? "Fondateur Serveur SkyBlock (FR)" : "SkyBlock Server Founder", text: lang === 'fr' ? "On stagnait à 50 joueurs simultanés. Après l'audit de Lucien et la refonte de l'acquisition, on a tapé les 500 en un mois. Il connait les codes par coeur." : "We were stuck at 50 concurrent players. After Lucien's audit and acquisition overhaul, we hit 500 in a month. He knows the codes by heart." },
-  { id: 2, name: "Sarah L.", role: "CMO - SaaS B2B", text: lang === 'fr' ? "J'avais peur de l'approche 'gaming' pour notre boîte très corporate. Finalement, c'est cette créativité qui nous a permis de débloquer notre coût par lead. Bluffant." : "I was afraid of the 'gaming' approach for our corporate company. Ultimately, this creativity unlocked our cost per lead. Stunning." },
-  { id: 3, name: "M. Gauthier", role: lang === 'fr' ? "Directeur E-commerce" : "E-commerce Director", text: lang === 'fr' ? "Pas de blabla, que des résultats. Il a géré notre campagne d'influence de A à Z avec une rigueur militaire. ROI x4." : "No fluff, just results. He managed our influencer campaign from A to Z with military rigor. 4x ROI." }
+  { id: 1, name: "Thomas", role: "Fondateur Serveur SkyBlock (FR)", text: "On stagnait à 50 joueurs simultanés. Après l'audit de Lucien et la refonte de l'acquisition, on a tapé les 500 en un mois. Il connait les codes par coeur." },
+  { id: 2, name: "Sarah L.", role: "CMO - SaaS B2B", text: "J'avais peur de l'approche 'gaming' pour notre boîte très corporate. Finalement, c'est cette créativité qui nous a permis de débloquer notre coût par lead. Bluffant." },
+  { id: 3, name: "M. Gauthier", role: "Directeur E-commerce", text: "Pas de blabla, que des résultats. Il a géré notre campagne d'influence de A à Z avec une rigueur militaire. ROI x4." }
 ];
 
 const getExperiences = (lang) => [
-  { company: 'RIVRS', link: 'https://www.rivrs.io/', role: lang === 'fr' ? 'Directeur Marketing & Influence' : 'Marketing & Influence Director', period: '2023 - ' + (lang === 'fr' ? 'Présent' : 'Present'), desc: lang === 'fr' ? 'Pilotage global des campagnes d\'influence sur Minecraft (FR & International).' : 'Global management of influencer campaigns on Minecraft (FR & International).', impact: lang === 'fr' ? '5M VISITEURS MENSUELS' : '5M MONTHLY VISITORS', details: lang === 'fr' ? ["Gestion et structuration des campagnes d'influence sur l'ensemble des serveurs Rivrs.", "Pilotage de stratégies massives sur les marchés France, US, DE et IT.", "Management de l'équipe marketing (8 personnes) et créative.", "Optimisation du CAC et de la LTV via des dashboards Data avancés."] : ["Management and structuring of influencer campaigns across all Rivrs servers.", "Steering massive strategies in FR, US, DE, and IT markets.", "Management of the marketing (8 people) and creative teams.", "CAC and LTV optimization via advanced Data dashboards."] },
-  { company: 'OUTLIER', link: 'https://outlier.ai/', role: 'AI Marketing Architect', period: '2023 - 2024', desc: lang === 'fr' ? 'Entraînement de modèles IA via le marketing de contenu stratégique.' : 'Training AI models via strategic content marketing.', impact: lang === 'fr' ? '100+ CAMPAGNES IA' : '100+ AI CAMPAIGNS', details: lang === 'fr' ? ["Collaboration étroite avec des ingénieurs IA pour affiner la pertinence et performance des modèles.", "Optimisation de modèles LLM pour la conversion marketing et psychologie client.", "Rédaction de scripts de vente haute-performance assistés par IA."] : ["Close collaboration with AI engineers to refine model relevance and performance.", "LLM optimization for marketing conversion and client psychology.", "High-performance AI-assisted sales script writing."] },
+  { company: 'RIVRS', link: 'https://www.rivrs.io/', role: 'Directeur Marketing & Influence', period: '2023 - Présent', desc: 'Pilotage global des campagnes d\'influence sur Minecraft (FR & International).', impact: '5M VISITEURS MENSUELS', details: ["Gestion et structuration des campagnes d'influence sur l'ensemble des serveurs Rivrs.", "Pilotage de stratégies massives sur les marchés France, US, DE et IT.", "Management de l'équipe marketing (8 personnes) et créative.", "Optimisation du CAC et de la LTV via des dashboards Data avancés."] },
+  { company: 'OUTLIER', link: 'https://outlier.ai/', role: 'AI Marketing Architect', period: '2023 - 2024', desc: 'Entraînement de modèles IA via le marketing de contenu stratégique.', impact: '100+ CAMPAGNES IA', details: ["Collaboration étroite avec des ingénieurs IA pour affiner la pertinence et performance des modèles.", "Optimisation de modèles LLM pour la conversion marketing et psychologie client.", "Rédaction de scripts de vente haute-performance assistés par IA."] },
   { 
     company: 'POUDLARD RP', 
     link: 'https://discord.gg/poudlardrp', 
-    role: lang === 'fr' ? 'Fondateur & Growth Director' : 'Founder & Growth Director', 
+    role: 'Fondateur & Growth Director', 
     period: '2018 - 2022', 
-    desc: lang === 'fr' ? 'Création et pilotage intégral du serveur Minecraft RPG Harry Potter n°1 en France.' : 'Creation and full management of the #1 Harry Potter RPG Minecraft server in France.', 
+    desc: 'Création et pilotage intégral du serveur Minecraft RPG Harry Potter n°1 en France.', 
     featured: true, 
     isPoudlard: true, 
-    impact: lang === 'fr' ? '300 000 JOUEURS UNIQUES' : '300,000 UNIQUE PLAYERS', 
-    details: lang === 'fr' ? [
+    impact: '300 000 JOUEURS UNIQUES', 
+    details: [
       'Acquisition de 300 000 joueurs uniques via une stratégie 100% organique.',
       'Management intégral de 100 membres (Développeurs, Game Artist et Graphiste, CM).', 
       'Architecture des boucles de viralité TikTok & monétisation in-game.', 
       'Développement d\'une économie virtuelle complexe et stable.'
-    ] : [
-      'Acquisition of 300,000 unique players via a 100% organic strategy.',
-      'Full management of 100 members (Developers, Game Artists, CM).',
-      'Architecture of TikTok viral loops & in-game monetization.',
-      'Development of a complex and stable virtual economy.'
     ]
   },
-  { company: 'UNREAL ENGINE', link: 'https://www.unrealengine.com/fr', role: lang === 'fr' ? 'Chargé de communauté & Événementiel (Stage)' : 'Community & Events Manager (Intern)', period: '2020 - 2022', desc: lang === 'fr' ? 'Community Manager pour l\'écosystème Unreal Engine, focalisé sur l\'engagement Discord.' : 'Community Manager for the Unreal Engine ecosystem, focused on Discord engagement.', impact: lang === 'fr' ? 'GESTION DISCORD INTÉGRALE' : 'FULL DISCORD MANAGEMENT', details: lang === 'fr' ? ["Gestion intégrale et animation du serveur Discord communautaire.", "Organisation d'événements en ligne et coordination des modérateurs.", "Mise en place de bots et de structures de salons pour optimiser l'UX communautaire.", "Relais d'information technique et support de premier niveau pour les créateurs."] : ["Full management and animation of the community Discord server.", "Organization of online events and moderator coordination.", "Implementation of bots and channel structures to optimize community UX.", "Technical information relay and first-level support for creators."] }
+  { company: 'UNREAL ENGINE', link: 'https://www.unrealengine.com/fr', role: 'Chargé de communauté & Événementiel (Stage)', period: '2020 - 2022', desc: 'Community Manager pour l\'écosystème Unreal Engine, focalisé sur l\'engagement Discord.', impact: 'GESTION DISCORD INTÉGRALE', details: ["Gestion intégrale et animation du serveur Discord communautaire.", "Organisation d'événements en ligne et coordination des modérateurs.", "Mise en place de bots et de structures de salons pour optimiser l'UX communautaire.", "Relais d'information technique et support de premier niveau pour les créateurs."] }
 ];
 
 const getStack = (lang) => [
-  { name: "Influence Marketing", icon: Share2, category: "Social", simple: lang === 'fr' ? "Connecter votre marque aux bonnes personnes pour créer de la confiance." : "Connecting your brand to the right people to build trust.", definition: lang === 'fr' ? "Partenariats avec des créateurs de contenu." : "Partnerships with content creators.", popular: true, extraInfo: lang === 'fr' ? "Carnet d'adresses : 300+ Créateurs Internationaux (FR/US/DE/IT)." : "Address book: 300+ International Creators (FR/US/DE/IT).", actions: lang === 'fr' ? ["Sourcing via Data Scraping", "Contrats Performance (CPA)", "Tunnels de Conversion Dédiés"] : ["Sourcing via Data Scraping", "Performance Contracts (CPA)", "Dedicated Conversion Funnels"] },
-  { name: "SEO / SEM", icon: Search, category: lang === 'fr' ? "Acquisition" : "Acquisition", simple: lang === 'fr' ? "Être trouvé immédiatement par ceux qui veulent acheter votre produit." : "Be found immediately by those who want to buy your product.", definition: lang === 'fr' ? "Optimisation Google & Publicité ciblée." : "Google Optimization & Targeted Ads.", actions: ["Topic Clusters & Content Silos", "Audit Core Web Vitals", "Google Ads ROI-Driven"] },
-  { name: lang === 'fr' ? "Développeur React" : "React Developer", icon: Trophy, category: "Tech", simple: lang === 'fr' ? "Développer des applications web ultra-performantes comme celle-ci." : "Developing ultra-high-performance web apps like this one.", definition: lang === 'fr' ? "Création de sites & apps modernes." : "Modern sites & apps creation.", isNew: true, actions: ["React & Tailwind", "Animations Framer Motion", "Expérience Utilisateur (UX)"] },
-  { name: "ADS (Tiktok, FB, Google)", icon: Megaphone, category: "Paid Media", simple: lang === 'fr' ? "Campagnes publicitaires ultra-ciblées pour un ROI immédiat." : "Ultra-targeted ad campaigns for immediate ROI.", definition: lang === 'fr' ? "Acquisition payante multicanale." : "Multi-channel paid acquisition.", actions: lang === 'fr' ? ["A/B Testing Massif", "Ciblage Comportemental", "Analytics Cohortes"] : ["Massive A/B Testing", "Behavioral Targeting", "Cohort Analytics"] },
-  { name: "CRM Automation", icon: Layers, category: "Retention", simple: lang === 'fr' ? "Prendre soin de vos clients automatiquement pour qu'ils achètent plus souvent." : "Taking care of your customers automatically so they buy more often.", definition: lang === 'fr' ? "Gestion automatisée de la base client." : "Automated client base management.", actions: lang === 'fr' ? ["Segmentation Comportementale", "Lead Nurturing", "Emailing Haute-Performance"] : ["Behavioral Segmentation", "Lead Nurturing", "High-Performance Emailing"] },
-  { name: lang === 'fr' ? "Plan de Com' 360°" : "360° Comm Plan", icon: Compass, category: lang === 'fr' ? "Stratégie" : "Strategy", simple: lang === 'fr' ? "Une feuille de route claire pour dominer votre marché et engager votre audience." : "A clear roadmap to dominate your market and engage your audience.", definition: lang === 'fr' ? "Vision globale et calendrier éditorial." : "Global vision and editorial calendar.", actions: lang === 'fr' ? ["Brand Voice", "Content Pillars", "Planification Stratégique"] : ["Brand Voice", "Content Pillars", "Strategic Planning"] }
+  { name: "Influence Marketing", icon: Share2, category: "Social", simple: "Connecter votre marque aux bonnes personnes pour créer de la confiance.", definition: "Partenariats avec des créateurs de contenu.", popular: true, extraInfo: "Carnet d'adresses : 300+ Créateurs Internationaux (FR/US/DE/IT).", actions: ["Sourcing via Data Scraping", "Contrats Performance (CPA)", "Tunnels de Conversion Dédiés"] },
+  { name: "SEO / SEM", icon: Search, category: "Acquisition", simple: "Être trouvé immédiatement par ceux qui veulent acheter votre produit.", definition: "Optimisation Google & Publicité ciblée.", actions: ["Topic Clusters & Content Silos", "Audit Core Web Vitals", "Google Ads ROI-Driven"] },
+  { name: "Développeur React", icon: Trophy, category: "Tech", simple: "Développer des applications web ultra-performantes comme celle-ci.", definition: "Création de sites & apps modernes.", isNew: true, actions: ["React & Tailwind", "Animations Framer Motion", "Expérience Utilisateur (UX)"] },
+  { name: "ADS (Tiktok, FB, Google)", icon: Megaphone, category: "Paid Media", simple: "Campagnes publicitaires ultra-ciblées pour un ROI immédiat.", definition: "Acquisition payante multicanale.", actions: ["A/B Testing Massif", "Ciblage Comportemental", "Analytics Cohortes"] },
+  { name: "CRM Automation", icon: Layers, category: "Retention", simple: "Prendre soin de vos clients automatiquement pour qu'ils achètent plus souvent.", definition: "Gestion automatisée de la base client.", actions: ["Segmentation Comportementale", "Lead Nurturing", "Emailing Haute-Performance"] },
+  { name: "Plan de Com' 360°", icon: Compass, category: "Stratégie", simple: "Une feuille de route claire pour dominer votre marché et engager votre audience.", definition: "Vision globale et calendrier éditorial.", actions: ["Brand Voice", "Content Pillars", "Planification Stratégique"] }
 ];
 
 const Toast = memo(({ message, onClose }) => {
@@ -682,7 +677,7 @@ const QuestTracker = memo(({ found, t }) => {
 });
 
 // --- NAVBAR ISOLATED SCROLL ---
-const Navbar = memo(({ view, navigateTo, openChat, lang, setLang, t, isMuted, toggleMute }) => {
+const Navbar = memo(({ view, navigateTo, openChat, t, isMuted, toggleMute }) => {
   const [scrolled, setScrolled] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
@@ -733,7 +728,6 @@ const Navbar = memo(({ view, navigateTo, openChat, lang, setLang, t, isMuted, to
               <div className="flex flex-col items-center gap-8 mt-8 border-t border-white/10 pt-12 w-2/3">
                 <button onClick={() => { openChat(); setIsMobileMenuOpen(false); }} className="w-full bg-white text-black px-10 py-6 rounded-[2rem] font-black uppercase tracking-[0.2em] shadow-2xl">{t.collab}</button>
                 <div className="flex items-center gap-6">
-                    <button onClick={() => setLang(l => l === 'fr' ? 'en' : 'fr')} className="text-slate-500 hover:text-white transition-colors text-xl font-black uppercase tracking-widest border-2 border-white/10 px-8 py-3 rounded-2xl">{lang === 'fr' ? 'FR' : 'EN'}</button>
                     <button onClick={toggleMute} className="text-slate-500 hover:text-white transition-colors p-3 border-2 border-white/10 rounded-2xl">
                         {isMuted ? <VolumeX size={24} /> : <Volume2 size={24} />}
                     </button>
@@ -749,7 +743,6 @@ const Navbar = memo(({ view, navigateTo, openChat, lang, setLang, t, isMuted, to
           <button onClick={openChat} className="bg-white text-black px-12 py-5 rounded-[2rem] font-black hover:bg-red-600 hover:text-white transition-all shadow-2xl active:scale-95 tracking-[0.2em] font-black uppercase border-2 border-transparent">{t.collab}</button>
           
           <div className="flex items-center gap-4 ml-[-20px]">
-              <button onClick={() => setLang(l => l === 'fr' ? 'en' : 'fr')} className="text-slate-500 hover:text-white transition-colors text-[10px] font-black uppercase tracking-widest border border-white/10 px-2 py-1 rounded-lg ml-[-20px]">{lang === 'fr' ? 'FR' : 'EN'}</button>
               <button onClick={toggleMute} className="text-slate-500 hover:text-white transition-colors">
                  {isMuted ? <VolumeX size={16} /> : <Volume2 size={16} />}
               </button>
@@ -905,10 +898,34 @@ const CollaborationForm = memo(({ onClose, playSound, t, stackData, questComplet
     playSound(800, 'sine', 0.05);
   }, [playSound]);
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    setStep(3);
     playSound(600, 'triangle', 0.3);
+
+    const formURL = "https://docs.google.com/forms/d/e/1FAIpQLSfba5x6oRziTkhXBInHvRycNp7uf-ZLX9U0LhXgBC-zg3m5dQ/formResponse";
+    const data = new FormData();
+
+    // Mapping des données du state vers les entrées Google Form
+    data.append("entry.858352694", formData.type);
+    data.append("entry.275061660", formData.missions.join(', '));
+    data.append("entry.1830973960", formData.isMinecraft ? "Oui" : "Non");
+    data.append("entry.1640397975", formData.duration);
+    data.append("entry.611680350", formData.location);
+    data.append("entry.1691884317", formData.project);
+    data.append("entry.1325911167", formData.email);
+    data.append("entry.1736174769", questCompleted ? "Oui (-5%)" : "Non");
+
+    try {
+      await fetch(formURL, {
+        method: "POST",
+        mode: "no-cors",
+        body: data
+      });
+    } catch (err) {
+      console.error("Erreur d'envoi", err);
+    }
+
+    setStep(3); // écran succès
   };
 
   const handleContainerClick = (e) => {
@@ -2388,7 +2405,7 @@ const App = () => {
         <p>Expert en management de créateurs de contenu et scaling infrastructure.</p>
       </div>
 
-      <Navbar view={view} navigateTo={navigateTo} openChat={openChat} lang={lang} setLang={setLang} t={t.nav} isMuted={isMuted} toggleMute={toggleMute} />
+      <Navbar view={view} navigateTo={navigateTo} openChat={openChat} t={t.nav} isMuted={isMuted} toggleMute={toggleMute} />
 
       <MainContent 
         view={view}
